@@ -12,11 +12,20 @@ set -euo pipefail
 BASENAME=${PWD##*/}
 SANDBOX_NAME="claude-${BASENAME//[^a-zA-Z0-9.+-]/-}"
 
-title() { printf '\n\033[1m%s\033[0m \033[90m%s\033[0m\n' "$1" "${2-}"; }
-ok()    { printf '  \033[32m✔\033[0m %b\n' "$*"; }
-run()   { printf '  \033[36m→\033[0m %s\n' "$*"; }
-warn()  { printf '  \033[33m!\033[0m %s\n' "$*"; }
-error() { printf '  \033[31m✘\033[0m %s\n' "$*"; }
+# $'...' so these hold real escape characters, usable directly in a format string.
+RESET=$'\033[0m'
+BOLD=$'\033[1m'
+RED=$'\033[31m'
+GREEN=$'\033[32m'
+YELLOW=$'\033[33m'
+CYAN=$'\033[36m'
+GREY=$'\033[90m'
+
+title() { printf "\n${BOLD}%s${RESET} ${GREY}%s${RESET}\n" "$1" "${2-}"; }
+ok()    { printf "  ${GREEN}✔${RESET} %s\n" "$*"; }
+run()   { printf "  ${CYAN}→${RESET} %s\n" "$*"; }
+warn()  { printf "  ${YELLOW}!${RESET} %s\n" "$*"; }
+error() { printf "  ${RED}✘${RESET} %s\n" "$*"; }
 
 sandbox_exists() {
     sbx ls 2>/dev/null | awk -v n="$SANDBOX_NAME" '$1 == n {found=1} END {exit !found}'
@@ -54,10 +63,10 @@ create_sandbox() {
 set_git_identity() {
     GIT_USER_NAME=$(git config --global user.name)
     GIT_USER_EMAIL=$(git config --global user.email)
-    GIT_COMMANDS="git config --global user.name \"$GIT_USER_NAME\"
-git config --global user.email \"$GIT_USER_EMAIL\""
+    GIT_COMMANDS="git config --global user.name \"$GIT_USER_NAME\""$'\n'
+    GIT_COMMANDS+="git config --global user.email \"$GIT_USER_EMAIL\""
     printf '%s\n' "$GIT_COMMANDS" | append_to_persistent_sh_file
-    ok "git identity  \033[90m$GIT_USER_NAME <$GIT_USER_EMAIL>\033[0m"
+    ok "git identity  ${GREY}$GIT_USER_NAME <$GIT_USER_EMAIL>${RESET}"
 }
 
 # Make sure the default permission is --dangerously-skip-permissions
