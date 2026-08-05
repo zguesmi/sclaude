@@ -5,8 +5,8 @@
 
 set -uo pipefail
 
-KIT_DIR="$HOME/.statusline-kit"
-log() { printf '[statusline-kit] %s\n' "$*"; }
+KIT_DIR="$(cd "$(dirname "$0")" && pwd)"
+log() { printf '[kit] %s\n' "$*"; }
 
 # Merge, never overwrite: settings.json holds the seeded bypassPermissions keys.
 setup_statusline() {

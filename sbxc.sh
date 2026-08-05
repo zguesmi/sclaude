@@ -77,7 +77,7 @@ setup_claude_full_permissions() {
     ok "claude bypass mode"
 }
 
-# Powerline prompt so it's obvious the shell is inside a sandbox.
+# Powerline shell prompt so it's obvious the shell is inside a sandbox.
 # \h is the sandbox name. Needs a Nerd/Powerline font for the  separator.
 # swap __sbx_sep for a plain character if yours lacks it.
 setup_shell_prompt() {
@@ -87,7 +87,7 @@ if [ -n "${PS1-}" ]; then
     PS1='\[\e[38;5;231;48;5;27m\] SBX \[\e[38;5;27;48;5;240m\]'"$__sbx_sep"'\[\e[38;5;231;48;5;240m\] \h \[\e[38;5;240;48;5;236m\]'"$__sbx_sep"'\[\e[38;5;252;48;5;236m\] \w \[\e[0m\e[38;5;236m\]'"$__sbx_sep"'\[\e[0m\] '
 fi
 BLOCK
-    ok "sandbox prompt"
+    ok "shell prompt"
 }
 
 run_sandbox() {
