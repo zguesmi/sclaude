@@ -1,10 +1,13 @@
 #!/bin/bash
+
 # Create the sandbox for the current directory if needed, then open a shell in it.
-# All arguments are forwarded verbatim to `sbx create`.
+# All arguments are forwarded to `sbx create`.
 #
-#   ./sbxc.sh
-#   ./sbxc.sh --kit ./statusline-kit
-#   ./sbxc.sh --kit ./statusline-kit ../docs:ro
+# Usage:
+#   sbxc
+#   sbxc --kit /path/to/statusline-kit ../docs:ro
+#
+# Install globally: ln -s "$PWD/sbxc.sh" ~/.local/bin/sbxc
 
 set -euo pipefail
 
