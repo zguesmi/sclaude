@@ -12,54 +12,77 @@ set -euo pipefail
 BASENAME=${PWD##*/}
 SANDBOX_NAME="claude-${BASENAME//[^a-zA-Z0-9.+-]/-}"
 
-step() { printf '\n\033[1m==> %s\033[0m\n' "$*"; }
-ok()   { printf '\033[32m[✓]\033[0m %s\n' "$*"; }
-skip() { printf '\033[90m[skip]\033[0m %s\n' "$*"; }
-info() { printf '\033[32m[info]\033[0m %s\n' "$*"; }
-warn() { printf '\033[33m[warn]\033[0m %s\n' "$*"; }
-error() { printf '\033[31m[err]\033[0m %s\n' "$*"; }
+title() { printf '\n\033[1m%s\033[0m \033[90m%s\033[0m\n' "$1" "${2-}"; }
+ok()    { printf '  \033[32m✔\033[0m %b\n' "$*"; }
+run()   { printf '  \033[36m→\033[0m %s\n' "$*"; }
+warn()  { printf '  \033[33m!\033[0m %s\n' "$*"; }
+error() { printf '  \033[31m✘\033[0m %s\n' "$*"; }
 
 sandbox_exists() {
     sbx ls 2>/dev/null | awk -v n="$SANDBOX_NAME" '$1 == n {found=1} END {exit !found}'
 }
 
-set_host_config() {
-    step "Host settings"
-    sbx settings set clipboard.imagePaste true >/dev/null && ok "clipboard.imagePaste enabled"
-    sbx settings set kit.allowLocalKits true >/dev/null && ok "kit.allowLocalKits enabled"
+setting_is() { [ "$(sbx settings get "$1" 2>/dev/null)" = "$2" ]; }
+
+# Appends to /etc/sandbox-persistent.sh, sourced before every bash in the sandbox.
+append_to_persistent_sh_file() {
+    sbx exec -i "$SANDBOX_NAME" bash -c 'cat >> /etc/sandbox-persistent.sh'
 }
 
+# Optional: silent when the host is already configured.
+set_host_config() {
+    setting_is clipboard.imagePaste true || {
+        sbx settings set clipboard.imagePaste true >/dev/null && ok "clipboard.imagePaste"
+    }
+    setting_is kit.allowLocalKits true || {
+        sbx settings set kit.allowLocalKits true >/dev/null && ok "kit.allowLocalKits"
+    }
+}
+
+# Optional: silent when a github secret is already stored.
 set_github_token() {
-    step "GitHub credential"
-    echo "$(gh auth token)" | sbx secret set -g github
-    ok "GitHub token set"
+    sbx secret ls 2>/dev/null | awk '$3 == "github" {f=1} END {exit !f}' && return
+    gh auth token | sbx secret set -g github >/dev/null && ok "github token stored"
 }
 
 create_sandbox() {
     # --kit only applies at create; `sbx kit add` restarts but preserves VM state.
     # sbx kit add "$SANDBOX_NAME" "$KIT_DIR"
-    step "Create sandbox '$SANDBOX_NAME'"
-    echo "sbx create --name $SANDBOX_NAME claude . $*"
-    sbx create --name "$SANDBOX_NAME" claude . "$@"
+    sbx create --name "$SANDBOX_NAME" claude . "$@" >/dev/null && ok "sandbox created"
 }
 
 set_git_identity() {
-    step "Git identity"
     GIT_USER_NAME=$(git config --global user.name)
     GIT_USER_EMAIL=$(git config --global user.email)
-    GIT_COMMANDS="git config user.name $GIT_USER_NAME; git config user.email $GIT_USER_EMAIL"
-    sbx exec "$SANDBOX_NAME" bash -c "echo $GIT_COMMANDS >> /etc/sandbox-persistent.sh"
+    GIT_COMMANDS="git config --global user.name \"$GIT_USER_NAME\"
+git config --global user.email \"$GIT_USER_EMAIL\""
+    printf '%s\n' "$GIT_COMMANDS" | append_to_persistent_sh_file
+    ok "git identity  \033[90m$GIT_USER_NAME <$GIT_USER_EMAIL>\033[0m"
 }
 
 # Make sure the default permission is --dangerously-skip-permissions
 # as it overridden in "run_sandbox".
 setup_claude_full_permissions() {
     printf '%s\n' 'claude() { command claude --dangerously-skip-permissions "$@"; }' \
-        | sbx exec -i "$SANDBOX_NAME" bash -c 'cat >> /etc/sandbox-persistent.sh'
+        | append_to_persistent_sh_file
+    ok "claude bypass mode"
+}
+
+# Powerline prompt so it's obvious the shell is inside a sandbox.
+# \h is the sandbox name. Needs a Nerd/Powerline font for the  separator.
+# swap __sbx_sep for a plain character if yours lacks it.
+setup_shell_prompt() {
+    append_to_persistent_sh_file <<'BLOCK'
+if [ -n "${PS1-}" ]; then
+    __sbx_sep=$''
+    PS1='\[\e[38;5;231;48;5;27m\] SBX \[\e[38;5;27;48;5;240m\]'"$__sbx_sep"'\[\e[38;5;231;48;5;240m\] \h \[\e[38;5;240;48;5;236m\]'"$__sbx_sep"'\[\e[38;5;252;48;5;236m\] \w \[\e[0m\e[38;5;236m\]'"$__sbx_sep"'\[\e[0m\] '
+fi
+BLOCK
+    ok "sandbox prompt"
 }
 
 run_sandbox() {
-    step "Opening shell"
+    run "shell"
     exec sbx exec -it "$SANDBOX_NAME" bash
 }
 
@@ -76,13 +99,15 @@ printf "    github https : %s\n" "$(gh auth status 2>&1 | grep -qi "logged in\|A
 
 main() {
     if sandbox_exists; then
-        info "Sandbox '$SANDBOX_NAME' already exists, running it"
+        title "$SANDBOX_NAME" "(existing)"
     else
+        title "$SANDBOX_NAME" "(new)"
         set_host_config
         set_github_token
         create_sandbox "$@"
         set_git_identity
         setup_claude_full_permissions
+        setup_shell_prompt
     fi
     # validate
     run_sandbox
