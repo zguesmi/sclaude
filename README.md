@@ -10,15 +10,15 @@ Verified on `sbx v0.37.0` / `claude-code-docker`.
 
 ```shell
 cd ~/my-project
-/path/to/sbx-postinstall-kit/sbx-up.sh
+/path/to/sclaude.sh
 ```
 
 Names the sandbox after the current directory, configures it, and attaches.
 
 ```shell
-./sbx-up.sh -n my-name        # explicit name
-./sbx-up.sh --no-run          # create without attaching
-./sbx-up.sh -- . ../docs:ro   # extra args for `sbx create`
+./sclaude.sh -n my-name        # explicit name
+./sclaude.sh --no-run          # create without attaching
+./sclaude.sh -- . ../docs:ro   # extra args for `sbx create`
 ```
 
 Re-running on an existing sandbox re-applies the kit with `sbx kit add`, which
@@ -80,7 +80,7 @@ All verified against `sbx v0.37.0`, not inferred from the docs.
   published docs still show v1.
 - **Kits can't read arbitrary host files at create time** (`initFiles` only
   expands `${WORKDIR}`; `credentials` file sources are proxy-only). Hence
-  `sbx-up.sh` stages the gitconfig host-side.
+  `sclaude.sh` stages the gitconfig host-side.
 
 ## Next
 
@@ -93,8 +93,8 @@ All verified against `sbx v0.37.0`, not inferred from the docs.
 
 ```text
 ├── spec.yaml                  kit spec (v2)
-├── sbx-up.sh                  host-side wrapper: settings, secret, skills, create
+├── sclaude.sh                  host-side wrapper: settings, secret, skills, create
 └── files/home/.sbx-kit/       → /home/agent/.sbx-kit/
-    ├── post-setup.sh          idempotent setup, runs at every sandbox start
+    ├── setup.sh                    idempotent setup, runs at every sandbox start
     └── statusline.sh          the statusline
 ```

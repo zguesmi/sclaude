@@ -2,9 +2,9 @@
 # Create the sandbox for the current directory if needed, then open a shell in it.
 # All arguments are forwarded verbatim to `sbx create`.
 #
-#   ./sbx-up.sh
-#   ./sbx-up.sh --kit ./sbx-postinstall-kit
-#   ./sbx-up.sh --kit ./sbx-postinstall-kit ../docs:ro
+#   ./sclaude.sh
+#   ./sclaude.sh --kit ./sbx-postinstall-kit
+#   ./sclaude.sh --kit ./sbx-postinstall-kit ../docs:ro
 
 set -euo pipefail
 
