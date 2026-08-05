@@ -1,0 +1,20 @@
+schemaVersion: "2"
+kind: mixin
+name: statusline-kit
+displayName: Claude Code statusline
+description: Registers a Claude Code statusline in every sandbox that loads this kit.
+
+commands:
+  # Startup, not install/initFiles, for two reasons:
+  #  - the sandbox seeds ~/.claude/settings.json after files/ and initFiles
+  #  - install runs before files/ is copied in, so it can't chmod kit scripts
+  # Hence `bash <path>`, which needs no execute bit.
+  startup:
+    - command: ["bash", "/home/agent/.statusline-kit/setup.sh"]
+      user: "1000"
+      description: Register the statusline in ~/.claude/settings.json
+
+agentContext: |
+  The statusline in this sandbox is managed by the `statusline-kit` kit.
+  Its files live in `~/.statusline-kit/` and are re-applied on every start,
+  so edits there won't survive a restart.
