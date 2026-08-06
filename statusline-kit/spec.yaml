@@ -2,19 +2,23 @@ schemaVersion: "2"
 kind: mixin
 name: statusline-kit
 displayName: Claude Code statusline
-description: Registers a Claude Code statusline in every sandbox that loads this kit.
+description: Adds a Claude Code statusline showing cwd, git branch, model, context %, rate limit and session cost.
 
 commands:
-  # Startup, not install/initFiles, for two reasons:
-  #  - the sandbox seeds ~/.claude/settings.json after files/ and initFiles
-  #  - install runs before files/ is copied in, so it can't chmod kit scripts
-  # Hence `bash <path>`, which needs no execute bit.
-  startup:
-    - command: ["bash", "/home/agent/.statusline-kit/setup.sh"]
-      user: "1000"
-      description: Register the statusline in ~/.claude/settings.json
-
-agentContext: |
-  The statusline in this sandbox is managed by the `statusline-kit` kit.
-  Its files live in `~/.statusline-kit/` and are re-applied on every start,
-  so edits there won't survive a restart.
+  install:
+    - description: |
+        Set the statusLine key in ~/.claude/settings.json to ~/.claude/statusline.sh using
+        jq merge, so all other keys are preserved. Any existing statusLine is overridden.
+      command: |
+        set -e
+        mkdir -p /home/agent/.claude
+        f=/home/agent/.claude/settings.json
+        [ -f "$f" ] || echo '{}' > "$f"
+        # Set only the statusLine key (any existing one is replaced by design);
+        # the jq merge leaves all other settings untouched. Temp file lives in the
+        # same dir as $f so the mv below is an atomic rename, not a cross-fs copy.
+        tmp=$(mktemp -p /home/agent/.claude)
+        jq '.statusLine = {type: "command", command: "/home/agent/.claude/statusline.sh"}' "$f" > "$tmp"
+        mv "$tmp" "$f"
+        chown -R agent:agent /home/agent/.claude
+      user: "0"

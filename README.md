@@ -1,37 +1,44 @@
 # sbx claude setup
 
-Automates the "Post-install configuration" section of the
-[Docker Sandboxes (sbx) for AI agents](REDACTED
-page, so a new sandbox needs no manual setup.
-
-Two pieces:
+Automates the post-install configuration of a Claude Code sandbox, so no manual setup is needed.
 
 - **`sbxc.sh`** — host wrapper. Creates the sandbox if missing, configures it, opens a shell.
-- **`statusline-kit/`** — kit that registers the Claude Code statusline on every sandbox start.
+- **`statusline-kit/`** — kit that ships the Claude Code statusline and registers it at sandbox creation.
 
 ## Layout
 
 ```text
-├── sbxc.sh                          host wrapper
+├── sbxc.sh                     host wrapper
 └── statusline-kit/
-    ├── spec.yaml                    kit spec (v2)
-    └── files/home/.statusline-kit/  → /home/agent/.statusline-kit/
-        ├── setup.sh                 registers the statusline, every start
-        └── statusline.sh            the statusline itself
+    ├── spec.yaml               kit spec, registers statusLine at install
+    └── files/home/.claude/
+        └── statusline.sh       → /home/agent/.claude/statusline.sh
+```
+
+## Install
+
+Clone the repo and symlink the script onto your PATH:
+
+```shell
+git clone <this-repo> ~/.local/share/sbxc
+ln -s ~/.local/share/sbxc/sbxc.sh ~/.local/bin/sbxc
+command -v sbxc || echo 'add ~/.local/bin to PATH in your shell rc'
 ```
 
 ## Usage
 
 ```shell
 cd ~/my-project
-/path/to/sbxc.sh --kit /path/to/statusline-kit
+sbxc
 ```
 
-The sandbox is named `claude-<directory>`. Every argument is forwarded straight
-to `sbx create`, so extra mounts work too:
+The sandbox is named `claude-<directory>` and `statusline-kit/` is applied by
+default. Every argument is forwarded straight to `sbx create`, so extra mounts
+work too:
 
 ```shell
-./sbxc.sh --kit ./statusline-kit ../docs:ro
+sbxc ../docs:ro                   # extra read-only mount
+sbxc --kit /path/to/other-kit     # adds to the default kit
 ```
 
 If the sandbox already exists, setup is skipped and you just get a shell in it.
@@ -59,10 +66,9 @@ as a `commands.startup` step.
 
 Verified against `sbx v0.37.0`, not inferred from the docs.
 
-- **The sandbox seeds `~/.claude/settings.json` after kit `files/` and
-  `initFiles`**, so only `commands.startup` runs late enough to touch it — and it
-  must be _merged_, since the seeded file carries `defaultMode: bypassPermissions`.
-  Docker's own [example](https://docs.docker.com/ai/sandboxes/customize/kit-examples/#override-agent-settings)
-  overwrites the file, which would leave the agent prompting on every tool call.
-- **Install commands run before `files/` is copied in**, so they can't `chmod` a
-  kit-shipped script. The startup command uses `bash <path>` instead.
+- **`~/.claude/settings.json` must be _merged_, never overwritten** — the kit does a `jq` merge.
+- **A mixin's install commands run after the agent's own**, which is where that
+  seeding happens — so an install-time merge survives. Static `files/` and
+  `initFiles` at that path do *not*: they're applied earlier and get overwritten.
+- **Install commands run before `files/` is copied in**, so they can't `chmod` or
+  read a kit-shipped file. Ship the executable bit in the file's own mode instead.
