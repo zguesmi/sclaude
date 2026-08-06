@@ -15,6 +15,7 @@ fi
 
 # --- model ---
 model=$(echo "$input" | jq -r '.model.display_name // empty')
+effort=$(echo "$input" | jq -r '.effort.level // "auto"')
 
 # --- context usage ---
 used=$(echo "$input" | jq -r '.context_window.used_percentage // empty')
@@ -59,14 +60,17 @@ caveman_badge=$(caveman)
 # --- assemble ---
 parts=()
 
+# directory + branch
 if [ -n "$branch" ]; then
     parts+=("$(printf '\033[34m%s\033[0m \033[36m(%s)\033[0m' "$dir" "$branch")")
 else
     parts+=("$(printf '\033[34m%s\033[0m' "$dir")")
 fi
 
-[ -n "$model" ] && parts+=("$(printf '\033[90m%s\033[0m' "$model")")
+# model
+[ -n "$model" ] && parts+=("$(printf '\033[90m%s\033[0m' "$model ($effort)")")
 
+# context used % (+ token count)
 if [ -n "$used" ]; then
     used_int=$(printf '%.0f' "$used")
     tok_str=""
@@ -86,17 +90,21 @@ if [ -n "$used" ]; then
     fi
 fi
 
+# 5-hour rate limit
 if [ -n "$five_pct" ]; then
     five_int=$(printf '%.0f' "$five_pct")
     [ "$five_int" -gt 0 ] && parts+=("$(printf '\033[90m5h:%d%%\033[0m' "$five_int")")
 fi
 
+# cost so far, USD
 if [ -n "$cost" ]; then
     parts+=("$(awk -v c="$cost" 'BEGIN{printf "\033[32m$%.2f\033[0m", c}')")
 fi
 
+# caveman badge (already colored, append as-is)
 [ -n "$caveman_badge" ] && parts+=("$caveman_badge")
 
+# join with separator
 result=""
 for part in "${parts[@]}"; do
     if [ -z "$result" ]; then
