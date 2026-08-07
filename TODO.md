@@ -1,0 +1,1 @@
+- use sclaude -r directly
