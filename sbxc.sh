@@ -1,12 +1,12 @@
 #!/bin/bash
 
 # Create the sandbox for the current directory if needed, then open a shell in it.
-# All arguments are forwarded to `sbx create`. statusline-kit is always loaded.
+# All arguments are forwarded to `sbx create`. Every *-kit beside the script is loaded.
 #
 # Usage:
-#   sbxc                              # statusline-kit only
+#   sbxc                              # bundled kits only
 #   sbxc ../docs:ro                   # extra read-only mount
-#   sbxc --kit /path/to/other-kit     # statusline-kit + other kit
+#   sbxc --kit /path/to/other-kit     # bundled kits + another one
 #
 # Install globally: ln -s "$PWD/sbxc.sh" ~/.local/bin/sbxc
 
@@ -16,9 +16,9 @@ set -euo pipefail
 BASENAME=${PWD##*/}
 SANDBOX_NAME="claude-${BASENAME//[^a-zA-Z0-9.+-]/-}"
 
-# readlink -f resolves the ~/.local/bin symlink, so the kit is found next to the
+# readlink -f resolves the ~/.local/bin symlink, so the kits are found next to the
 # real script rather than next to the link.
-KIT_DIR="$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/statusline-kit"
+KITS_DIR="$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")"
 
 # $'...' so these hold real escape characters, usable directly in a format string.
 RESET=$'\033[0m'
@@ -64,7 +64,7 @@ set_github_token() {
 
 create_sandbox() {
     # --kit only applies at create; `sbx kit add` restarts but preserves VM state.
-    # sbx kit add "$SANDBOX_NAME" "$KIT_DIR"
+    # sbx kit add "$SANDBOX_NAME" <kit>
     sbx create --name "$SANDBOX_NAME" claude . "$@" >/dev/null && ok "sandbox created"
 }
 
@@ -85,19 +85,6 @@ setup_claude_full_permissions() {
     ok "claude bypass mode"
 }
 
-# Powerline shell prompt so it's obvious the shell is inside a sandbox.
-# \h is the sandbox name. Needs a Nerd/Powerline font for the  separator.
-# swap __sbx_sep for a plain character if yours lacks it.
-setup_shell_prompt() {
-    append_to_persistent_sh_file <<'BLOCK'
-if [ -n "${PS1-}" ]; then
-    __sbx_sep=$''
-    PS1='\[\e[38;5;231;48;5;27m\] SBX \[\e[38;5;27;48;5;240m\]'"$__sbx_sep"'\[\e[38;5;231;48;5;240m\] \h \[\e[38;5;240;48;5;236m\]'"$__sbx_sep"'\[\e[38;5;252;48;5;236m\] \w \[\e[0m\e[38;5;236m\]'"$__sbx_sep"'\[\e[0m\] '
-fi
-BLOCK
-    ok "shell prompt"
-}
-
 run_sandbox() {
     run "shell"
     exec sbx exec -it "$SANDBOX_NAME" bash
@@ -115,8 +102,8 @@ printf "    github https : %s\n" "$(gh auth status 2>&1 | grep -qi "logged in\|A
 }
 
 main() {
-    # Load the bundled kit + others specified by the caller.
-    set -- --kit "$KIT_DIR" "$@"
+    # Load default kits, plus others specified by the caller.
+    set -- --kit "$KITS_DIR/shell-prompt-kit" --kit "$KITS_DIR/statusline-kit" "$@"
 
     if sandbox_exists; then
         title "$SANDBOX_NAME" "(existing)"
@@ -127,7 +114,6 @@ main() {
         create_sandbox "$@"
         set_git_identity
         setup_claude_full_permissions
-        setup_shell_prompt
     fi
     # validate
     run_sandbox

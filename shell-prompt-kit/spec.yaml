@@ -1,0 +1,21 @@
+schemaVersion: "2"
+kind: mixin
+name: shell-prompt-kit
+displayName: Sandbox shell prompt
+description: Powerline-style bash prompt showing SBX, the sandbox name and the working directory, so it is obvious the shell is inside a sandbox.
+
+commands:
+  install:
+    - description: |
+        Append the PS1 definition to /etc/sandbox-persistent.sh, which every bash
+        in the sandbox sources. Needs a Nerd/Powerline font for the  separator;
+        swap __sbx_sep for a plain character if yours lacks it.
+      command: |
+        set -e
+        cat >> /etc/sandbox-persistent.sh <<'BLOCK'
+        if [ -n "${PS1-}" ]; then
+            __sbx_sep=$''
+            PS1='\[\e[38;5;231;48;5;27m\] SBX \[\e[38;5;27;48;5;240m\]'"$__sbx_sep"'\[\e[38;5;231;48;5;240m\] \h \[\e[38;5;240;48;5;236m\]'"$__sbx_sep"'\[\e[38;5;252;48;5;236m\] \w \[\e[0m\e[38;5;236m\]'"$__sbx_sep"'\[\e[0m\] '
+        fi
+        BLOCK
+      user: "1000"
