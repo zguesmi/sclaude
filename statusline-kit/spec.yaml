@@ -20,5 +20,4 @@ commands:
         tmp=$(mktemp -p /home/agent/.claude)
         jq '.statusLine = {type: "command", command: "/home/agent/.claude/statusline.sh"}' "$f" > "$tmp"
         mv "$tmp" "$f"
-        chown -R agent:agent /home/agent/.claude
-      user: "0"
+      user: "1000"

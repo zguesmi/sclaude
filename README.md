@@ -1,6 +1,7 @@
 # sbx claude setup
 
 Automates the post-install configuration of a Claude Code sandbox, so no manual setup is needed.
+A sandbox is created and a shell is opened by default so Claude commands could be run as wished.
 
 - **`sbxc.sh`** — host wrapper. Creates the sandbox if missing, configures it, opens a shell.
 - **`statusline-kit/`** — kit that ships the Claude Code statusline and registers it at sandbox creation.
@@ -41,7 +42,12 @@ sbxc ../docs:ro                   # extra read-only mount
 sbxc --kit /path/to/other-kit     # adds to the default kit
 ```
 
-If the sandbox already exists, setup is skipped and you just get a shell in it.
+If the sandbox already exists, setup is skipped and you go straight to the shell.
+
+You land in a **shell**, not in Claude Code. That's deliberate: you decide when to
+start `claude`, can run it more than once, and keep using the same sandbox for
+the same project. The `claude` command is wrapped so it always carries
+`--dangerously-skip-permissions`.
 
 ## What it does
 
@@ -59,8 +65,8 @@ On a **new** sandbox, `sbxc.sh` runs these steps (steps already satisfied stay s
 `/etc/sandbox-persistent.sh` is sourced before every bash invocation in the
 sandbox — that's what makes the last three persist.
 
-The statusline is the kit's job rather than the script's, because it has to run
-as a `commands.startup` step.
+The statusline is the kit's job rather than the script's, so it travels with the
+kit and applies to any sandbox that loads it.
 
 ## Gotchas
 
