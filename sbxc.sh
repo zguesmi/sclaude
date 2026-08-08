@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Create the sandbox for the current directory if needed, then open a shell in it.
+# Create the sandbox for the current directory if needed, then launch Claude in it.
 # All arguments are forwarded to `sbx create`. Every *-kit beside the script is loaded.
 #
 # Usage:
@@ -78,17 +78,9 @@ set_git_identity() {
     ok "git identity  ${GREY}$GIT_USER_NAME <$GIT_USER_EMAIL>${RESET}"
 }
 
-# Make sure the default permission is --dangerously-skip-permissions
-# as it overridden in "run_sandbox".
-setup_claude_full_permissions() {
-    printf '%s\n' 'claude() { command claude --dangerously-skip-permissions "$@"; }' \
-        | append_to_persistent_sh_file
-    ok "claude bypass mode"
-}
-
 run_sandbox() {
-    run "shell"
-    exec sbx exec -it "$SANDBOX_NAME" bash
+    run "Claude Code"
+    exec sbx run --name "$SANDBOX_NAME"
 }
 
 validate() {
@@ -114,7 +106,6 @@ main() {
         set_github_token
         create_sandbox "$@"
         set_git_identity
-        setup_claude_full_permissions
     fi
     # validate
     run_sandbox

@@ -53,10 +53,10 @@ call is commented out in `main()`.)
 **Two persistence mechanisms inside a sandbox, used for different things:**
 
 1. `/etc/sandbox-persistent.sh` — sourced before *every* bash invocation in the sandbox. `sbxc.sh`
-   appends to it (git identity, the `claude()` wrapper function) rather than overwriting, since
-   multiple install steps and kits share this one file. This is also why shell completion scripts
-   must never be appended here (they reference `COMP_WORDS`/`COMPREPLY`, which don't exist outside
-   an actual completion context, and sourcing them on every command breaks bash entirely).
+   appends to it (git identity) rather than overwriting, since multiple install steps and kits share
+   this one file. This is also why shell completion scripts must never be appended here (they
+   reference `COMP_WORDS`/`COMPREPLY`, which don't exist outside an actual completion context, and
+   sourcing them on every command breaks bash entirely).
 2. `~/.claude/settings.json` — must be merged via `jq`, never overwritten, since more than one kit
    (or the user) may set different top-level keys. `statusline-kit` does `jq '.statusLine = {...}'`
    into a temp file in the same directory, then `mv`s it over the original for an atomic replace.
@@ -70,14 +70,17 @@ call is commented out in `main()`.)
 
 **`sbxc.sh` control flow** (`main()` at the bottom): build the kit list → check if the sandbox already
 exists (`sandbox_exists`, via `sbx ls`) → if new, run host config, GitHub token provisioning,
-`sbx create`, git identity injection, and the `claude()` bypass wrapper, in that order → always end
-by `exec`-ing into an interactive shell (`run_sandbox`). If the sandbox already exists, all setup is
-skipped entirely and it goes straight to the shell — setup is one-shot per sandbox, not idempotently
-re-applied on every invocation.
+`sbx create`, and git identity injection, in that order → always end by `exec`-ing directly into
+`claude --dangerously-skip-permissions` in the sandbox (`run_claude`). If the sandbox already exists,
+all setup is skipped entirely and it goes straight to launching Claude — setup is one-shot per
+sandbox, not idempotently re-applied on every invocation.
 
-Deliberate design choice: `sbxc` drops you into a **shell**, not directly into `claude` — so you can
-run `claude` more than once, or not at all, in the same sandbox. The `claude` function injected into
-`/etc/sandbox-persistent.sh` always adds `--dangerously-skip-permissions`.
+`sbxc` lands you directly in Claude Code, not a shell — running `sbxc` again against the same
+project just starts another Claude session in the same sandbox. `--dangerously-skip-permissions` is
+passed on the launch command line rather than injected as a persistent `claude()` wrapper. For a
+plain shell (e.g. to run other commands), use `sbx exec -it <name> bash` directly — `shell-prompt-kit`
+is still installed by default so that shell gets the powerline prompt, even though it's no longer
+where `sbxc` lands you.
 
 **Statusline script** (`statusline-kit/files/home/.claude/statusline.sh`) reads Claude Code's
 statusline JSON payload from stdin and renders: cwd basename, git branch, model + effort, context

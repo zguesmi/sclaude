@@ -65,7 +65,7 @@ caveman_badge=$(caveman)
 parts=()
 
 # sbx sandbox badge (coral, matching shell-prompt-kit's SBX segment)
-[ -n "$sbx_name" ] && parts+=("$(printf '\033[38;5;173mSBX:%s\033[0m' "$sbx_name")")
+[ -n "$sbx_name" ] && parts+=("$(printf '\033[38;5;173m[SBX] %s\033[0m' "$sbx_name")")
 
 # directory + branch
 if [ -n "$branch" ]; then
