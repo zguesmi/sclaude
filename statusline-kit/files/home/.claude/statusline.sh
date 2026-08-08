@@ -3,6 +3,10 @@
 
 input=$(cat)
 
+# --- sbx sandbox name (IS_SANDBOX/SANDBOX_VM_ID set by sbx itself) ---
+sbx_name=""
+[ "${IS_SANDBOX:-}" = "1" ] && sbx_name="${SANDBOX_VM_ID:-$(hostname)}"
+
 # --- directory (basename of cwd) ---
 cwd=$(echo "$input" | jq -r '.workspace.current_dir // empty')
 dir=$(basename "$cwd")
@@ -59,6 +63,9 @@ caveman_badge=$(caveman)
 
 # --- assemble ---
 parts=()
+
+# sbx sandbox badge (coral, matching shell-prompt-kit's SBX segment)
+[ -n "$sbx_name" ] && parts+=("$(printf '\033[38;5;173mSBX:%s\033[0m' "$sbx_name")")
 
 # directory + branch
 if [ -n "$branch" ]; then
