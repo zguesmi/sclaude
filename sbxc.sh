@@ -1,12 +1,15 @@
 #!/bin/bash
 
 # Create the sandbox for the current directory if needed, then launch Claude in it.
-# All arguments are forwarded straight through to `claude` (via `sbx run -- ...`).
+# Args are forwarded straight through to `claude` (via `sbx run -- ...`). A `--`
+# in the script's own args splits that from a second group forwarded to `sbx create`
+# (only meaningful the first time, when the sandbox doesn't exist yet).
 #
 # Usage:
 #   sbxc                              # launch claude
 #   sbxc -r                           # -> claude -r
 #   sbxc agents                       # -> claude agents
+#   sbxc -r -- --kit /path/to/other-kit   # claude -r, plus an extra kit at create time
 #
 # Install globally: ln -s "$PWD/sbxc.sh" ~/.local/bin/sbxc
 
@@ -20,6 +23,15 @@ SANDBOX_NAME="$AGENT-${BASENAME//[^a-zA-Z0-9.+-]/-}"
 # readlink -f resolves the ~/.local/bin symlink, so the kits are found next to the
 # real script rather than next to the link.
 KITS_DIR="$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")"
+
+# Split "$@" on the first literal "--": before it goes to claude, after it goes
+# to `sbx create` (e.g. extra --kit/mounts).
+CLAUDE_ARGS=()
+while [ $# -gt 0 ] && [ "$1" != "--" ]; do
+    CLAUDE_ARGS+=("$1")
+    shift
+done
+SBX_CREATE_ARGS=("${@:2}")  # skips the "--" itself; empty when there was none
 
 # $'...' so these hold real escape characters, usable directly in a format string.
 RESET=$'\033[0m'
@@ -66,9 +78,11 @@ set_github_token() {
 create_sandbox() {
     # --kit only applies at create; `sbx kit add` restarts but preserves VM state.
     # sbx kit add "$SANDBOX_NAME" <kit>
-    sbx create --name "$SANDBOX_NAME" "$AGENT" . \
-        --kit "$KITS_DIR/shell-prompt-kit" --kit "$KITS_DIR/statusline-kit" \
-        >/dev/null && ok "sandbox created"
+    sbx create --name "$SANDBOX_NAME" \
+        --kit "$KITS_DIR/shell-prompt-kit" \
+        --kit "$KITS_DIR/statusline-kit" \
+        "${SBX_CREATE_ARGS[@]}" \
+        "$AGENT" . >/dev/null && ok "sandbox created"
 }
 
 set_git_identity() {
@@ -82,23 +96,13 @@ set_git_identity() {
 
 run_sandbox() {
     run "Claude Code"
-    exec sbx run --name "$SANDBOX_NAME" -- "$@"
-}
-
-validate() {
-    step "Ready"
-    # No --global on the git reads: that scope skips the [include] holding the identity.
-    sbx exec "$SANDBOX_NAME" -- bash -lc '
-printf "    git identity : %s\n" `git config list | grep name`
-printf "    statusline   : %s\n" "$(jq -r ".statusLine.command // \"NOT SET\"" ~/.claude/settings.json 2>/dev/null)"
-printf "    agent mode   : %s\n" "$(jq -r ".defaultMode // \"default\"" ~/.claude/settings.json 2>/dev/null)"
-printf "    github https : %s\n" "$(gh auth status 2>&1 | grep -qi "logged in\|Active account" && echo "authenticated via proxy" || echo "unauthenticated (public repos only)")"
-' 2>/dev/null || warn "could not verify sandbox state"
+    exec sbx run --name "$SANDBOX_NAME" -- "${CLAUDE_ARGS[@]}"
 }
 
 main() {
     if sandbox_exists; then
         title "$SANDBOX_NAME" "(existing)"
+        [ "${#SBX_CREATE_ARGS[@]}" -eq 0 ] || warn "ignoring args after --  (sandbox already exists): ${SBX_CREATE_ARGS[*]}"
     else
         title "$SANDBOX_NAME" "(new)"
         set_host_config
@@ -106,8 +110,7 @@ main() {
         create_sandbox
         set_git_identity
     fi
-    # validate
-    run_sandbox "$@"
+    run_sandbox
 }
 
-main "$@"
+main

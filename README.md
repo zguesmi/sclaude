@@ -45,6 +45,14 @@ sbxc -r        # -> claude -r
 sbxc agents    # -> claude agents
 ```
 
+A `--` in `sbxc`'s own args splits that from a second group forwarded to
+`sbx create` instead — only meaningful the first time, while the sandbox is
+still being created:
+
+```shell
+sbxc -r -- --kit /path/to/other-kit   # claude -r, plus an extra kit at create time
+```
+
 If the sandbox already exists, setup is skipped and you go straight to Claude.
 
 You land directly in **Claude Code**, launched with `--dangerously-skip-permissions`.

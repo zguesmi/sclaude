@@ -22,9 +22,10 @@ statusline-kit/files/home/.claude/
 
 A "kit" is an `sbx` mixin: a `spec.yaml` with `install` commands (run once, at sandbox creation) plus
 an optional `files/` tree that gets copied verbatim into the sandbox's home directory. `sbxc.sh`
-always loads `shell-prompt-kit` and `statusline-kit` from its own directory at creation time —
-there's no caller-supplied `--kit` passthrough; all of `sbxc`'s CLI args go to `claude` instead (see
-below).
+always loads `shell-prompt-kit` and `statusline-kit` from its own directory at creation time. By
+default all of `sbxc`'s CLI args go to `claude` instead (see below) — a caller-supplied `--` splits
+that: args before it go to `claude`, args after it (e.g. an extra `--kit ...`) go to `sbx create`,
+which only matters the first time, before the sandbox exists.
 
 ## Running / testing changes
 
@@ -69,13 +70,14 @@ call is commented out in `main()`.)
 - `install` commands run *before* `files/` is copied in. A kit's install script cannot `chmod` or
   otherwise touch a file it ships in `files/` — set the executable bit in the file's own mode instead.
 
-**`sbxc.sh` control flow** (`main()` at the bottom): check if the sandbox already exists
-(`sandbox_exists`, via `sbx ls`) → if new, run host config, GitHub token provisioning, `sbx create`
-(with the two bundled kits baked into the call), and git identity injection, in that order → always
-end by `exec`-ing into `sbx run --name <name> -- "$@"` (`run_sandbox`), which forwards every argument
-`sbxc` was called with straight through to the agent. If the sandbox already exists, all setup is
-skipped entirely and it goes straight to launching Claude — setup is one-shot per sandbox, not
-idempotently re-applied on every invocation.
+**`sbxc.sh` control flow**: `"$@"` is split up front on the first literal `--` into `CLAUDE_ARGS`
+(before) and `CREATE_ARGS` (after) — both module-level arrays, read directly by the functions below
+rather than passed around. `main()` (at the bottom) checks if the sandbox already exists
+(`sandbox_exists`, via `sbx ls`) → if new, runs host config, GitHub token provisioning, `create_sandbox`
+(bundled kits + `CREATE_ARGS`), and git identity injection, in that order; if it already exists and
+`CREATE_ARGS` is non-empty, warns that those args are being ignored (they only mean something at
+creation) → always ends by `exec`-ing into `sbx run --name <name> -- "${CLAUDE_ARGS[@]}"`
+(`run_sandbox`). Setup is one-shot per sandbox, not idempotently re-applied on every invocation.
 
 `sbxc` lands you directly in Claude Code, not a shell — `sbxc -r` becomes `claude -r`, `sbxc agents`
 becomes `claude agents`, and so on; running plain `sbxc` again against the same project just starts
