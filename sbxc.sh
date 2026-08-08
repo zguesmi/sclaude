@@ -1,12 +1,12 @@
 #!/bin/bash
 
 # Create the sandbox for the current directory if needed, then launch Claude in it.
-# All arguments are forwarded to `sbx create`. Every *-kit beside the script is loaded.
+# All arguments are forwarded straight through to `claude` (via `sbx run -- ...`).
 #
 # Usage:
-#   sbxc                              # bundled kits only
-#   sbxc ../docs:ro                   # extra read-only mount
-#   sbxc --kit /path/to/other-kit     # bundled kits + another one
+#   sbxc                              # launch claude
+#   sbxc -r                           # -> claude -r
+#   sbxc agents                       # -> claude agents
 #
 # Install globally: ln -s "$PWD/sbxc.sh" ~/.local/bin/sbxc
 
@@ -66,7 +66,9 @@ set_github_token() {
 create_sandbox() {
     # --kit only applies at create; `sbx kit add` restarts but preserves VM state.
     # sbx kit add "$SANDBOX_NAME" <kit>
-    sbx create --name "$SANDBOX_NAME" "$AGENT" . "$@" >/dev/null && ok "sandbox created"
+    sbx create --name "$SANDBOX_NAME" "$AGENT" . \
+        --kit "$KITS_DIR/shell-prompt-kit" --kit "$KITS_DIR/statusline-kit" \
+        >/dev/null && ok "sandbox created"
 }
 
 set_git_identity() {
@@ -80,7 +82,7 @@ set_git_identity() {
 
 run_sandbox() {
     run "Claude Code"
-    exec sbx run --name "$SANDBOX_NAME"
+    exec sbx run --name "$SANDBOX_NAME" -- "$@"
 }
 
 validate() {
@@ -95,20 +97,17 @@ printf "    github https : %s\n" "$(gh auth status 2>&1 | grep -qi "logged in\|A
 }
 
 main() {
-    # Load default kits, plus others specified by the caller.
-    set -- --kit "$KITS_DIR/shell-prompt-kit" --kit "$KITS_DIR/statusline-kit" "$@"
-
     if sandbox_exists; then
         title "$SANDBOX_NAME" "(existing)"
     else
         title "$SANDBOX_NAME" "(new)"
         set_host_config
         set_github_token
-        create_sandbox "$@"
+        create_sandbox
         set_git_identity
     fi
     # validate
-    run_sandbox
+    run_sandbox "$@"
 }
 
 main "$@"

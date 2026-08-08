@@ -37,12 +37,12 @@ sbxc
 ```
 
 The sandbox is named `claude-<directory>` and both `shell-prompt-kit/` and
-`statusline-kit/` are applied by default. Every argument is forwarded straight
-to `sbx create`, so extra mounts work too:
+`statusline-kit/` are applied at creation. Every argument is forwarded straight
+through to `claude` (via `sbx run -- ...`):
 
 ```shell
-sbxc ../docs:ro                   # extra read-only mount
-sbxc --kit /path/to/other-kit     # adds to the default kit
+sbxc -r        # -> claude -r
+sbxc agents    # -> claude agents
 ```
 
 If the sandbox already exists, setup is skipped and you go straight to Claude.
@@ -55,10 +55,6 @@ If you want a plain shell instead (e.g. to run other commands), open one manuall
 ```shell
 sbx exec -it <sandbox-name> bash
 ```
-
-@claude remove this.
-`shell-prompt-kit` is still installed by default so that shell gets the powerline
-prompt, even though it's no longer where `sbxc` lands you.
 
 ## What it does
 

@@ -7,9 +7,9 @@ input=$(cat)
 sbx_name=""
 [ "${IS_SANDBOX:-}" = "1" ] && sbx_name="${SANDBOX_VM_ID:-$(hostname)}"
 
-# --- directory (basename of cwd) ---
+# --- directory (full path of cwd) ---
 cwd=$(echo "$input" | jq -r '.workspace.current_dir // empty')
-dir=$(basename "$cwd")
+dir="$cwd"
 
 # --- git branch (skip optional locks) ---
 branch=""

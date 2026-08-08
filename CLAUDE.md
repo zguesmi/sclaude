@@ -22,8 +22,9 @@ statusline-kit/files/home/.claude/
 
 A "kit" is an `sbx` mixin: a `spec.yaml` with `install` commands (run once, at sandbox creation) plus
 an optional `files/` tree that gets copied verbatim into the sandbox's home directory. `sbxc.sh`
-always loads `shell-prompt-kit` and `statusline-kit` from its own directory, then forwards any
-caller-supplied `--kit ...` on top.
+always loads `shell-prompt-kit` and `statusline-kit` from its own directory at creation time —
+there's no caller-supplied `--kit` passthrough; all of `sbxc`'s CLI args go to `claude` instead (see
+below).
 
 ## Running / testing changes
 
@@ -68,19 +69,19 @@ call is commented out in `main()`.)
 - `install` commands run *before* `files/` is copied in. A kit's install script cannot `chmod` or
   otherwise touch a file it ships in `files/` — set the executable bit in the file's own mode instead.
 
-**`sbxc.sh` control flow** (`main()` at the bottom): build the kit list → check if the sandbox already
-exists (`sandbox_exists`, via `sbx ls`) → if new, run host config, GitHub token provisioning,
-`sbx create`, and git identity injection, in that order → always end by `exec`-ing directly into
-`claude --dangerously-skip-permissions` in the sandbox (`run_claude`). If the sandbox already exists,
-all setup is skipped entirely and it goes straight to launching Claude — setup is one-shot per
-sandbox, not idempotently re-applied on every invocation.
+**`sbxc.sh` control flow** (`main()` at the bottom): check if the sandbox already exists
+(`sandbox_exists`, via `sbx ls`) → if new, run host config, GitHub token provisioning, `sbx create`
+(with the two bundled kits baked into the call), and git identity injection, in that order → always
+end by `exec`-ing into `sbx run --name <name> -- "$@"` (`run_sandbox`), which forwards every argument
+`sbxc` was called with straight through to the agent. If the sandbox already exists, all setup is
+skipped entirely and it goes straight to launching Claude — setup is one-shot per sandbox, not
+idempotently re-applied on every invocation.
 
-`sbxc` lands you directly in Claude Code, not a shell — running `sbxc` again against the same
-project just starts another Claude session in the same sandbox. `--dangerously-skip-permissions` is
-passed on the launch command line rather than injected as a persistent `claude()` wrapper. For a
-plain shell (e.g. to run other commands), use `sbx exec -it <name> bash` directly — `shell-prompt-kit`
-is still installed by default so that shell gets the powerline prompt, even though it's no longer
-where `sbxc` lands you.
+`sbxc` lands you directly in Claude Code, not a shell — `sbxc -r` becomes `claude -r`, `sbxc agents`
+becomes `claude agents`, and so on; running plain `sbxc` again against the same project just starts
+another Claude session in the same sandbox. For a plain shell (e.g. to run other commands), use
+`sbx exec -it <name> bash` directly — `shell-prompt-kit` is still installed by default so that shell
+gets the powerline prompt, even though it's no longer where `sbxc` lands you.
 
 **Statusline script** (`statusline-kit/files/home/.claude/statusline.sh`) reads Claude Code's
 statusline JSON payload from stdin and renders: cwd basename, git branch, model + effort, context
