@@ -38,7 +38,9 @@ sbx exec -it <name> bash  # re-enter an existing sandbox without re-running setu
 sbx kit add <name> <path-to-kit>   # apply a kit to an existing sandbox (restarts, preserves VM state)
 ```
 
-Sandbox naming: `claude-<basename-of-cwd>`, non-alphanumeric characters in the basename replaced with `-`.
+Sandbox naming: `claude-<basename-of-cwd>`, non-alphanumeric characters in the basename replaced
+with `-`, passed explicitly as `--name` at create. `sbxc.sh` derives the same name on every run,
+which is how `sandbox_exists()` recognises an already-configured sandbox.
 
 To check what actually landed in a sandbox after setup:
 
@@ -71,13 +73,14 @@ call is commented out in `main()`.)
   otherwise touch a file it ships in `files/` — set the executable bit in the file's own mode instead.
 
 **`sbxc.sh` control flow**: `"$@"` is split up front on the first literal `--` into `CLAUDE_ARGS`
-(before) and `CREATE_ARGS` (after) — both module-level arrays, read directly by the functions below
-rather than passed around. `main()` (at the bottom) checks if the sandbox already exists
-(`sandbox_exists`, via `sbx ls`) → if new, runs host config, GitHub token provisioning, `create_sandbox`
-(bundled kits + `CREATE_ARGS`), and git identity injection, in that order; if it already exists and
-`CREATE_ARGS` is non-empty, warns that those args are being ignored (they only mean something at
-creation) → always ends by `exec`-ing into `sbx run --name <name> -- "${CLAUDE_ARGS[@]}"`
-(`run_sandbox`). Setup is one-shot per sandbox, not idempotently re-applied on every invocation.
+(before) and `SBX_CREATE_ARGS` (after) — both module-level arrays, read directly by the functions
+below rather than passed around. `main()` (at the bottom) checks if the sandbox already exists
+(`sandbox_exists`, via `sbx ls`) → if new, runs host config, GitHub token provisioning,
+`create_sandbox` (bundled kits + `SBX_CREATE_ARGS`), and git identity injection, in that order; if it
+already exists and `SBX_CREATE_ARGS` is non-empty, warns that those args are being ignored (they only
+mean something at creation) → always ends by `exec`-ing into
+`sbx run --name <name> -- "${CLAUDE_ARGS[@]}"` (`run_sandbox`). Setup is one-shot per sandbox, not
+idempotently re-applied on every invocation.
 
 `sbxc` lands you directly in Claude Code, not a shell — `sbxc -r` becomes `claude -r`, `sbxc agents`
 becomes `claude agents`, and so on; running plain `sbxc` again against the same project just starts
