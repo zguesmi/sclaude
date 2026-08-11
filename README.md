@@ -6,6 +6,8 @@ A sandbox is created and Claude is launched directly in it by default.
 - **`sbxc.sh`** — host wrapper. Creates the sandbox if missing, configures it, launches Claude.
 - **`shell-prompt-kit/`** — kit that ships the powerline shell prompt, for when you drop into a plain shell instead.
 - **`statusline-kit/`** — kit that ships the Claude Code statusline and registers it at sandbox creation.
+- **`git-guardrails-kit/`** — kit that ships a `PreToolUse` hook blocking destructive git commands.
+- **`access-audit-kit/`** — kit that logs every denied access into `<repo>/.sbx/access-denials.md`.
 
 ## Layout
 
@@ -13,11 +15,77 @@ A sandbox is created and Claude is launched directly in it by default.
 ├── sbxc.sh                     host wrapper
 ├── shell-prompt-kit/
 │   └── spec.yaml               kit spec, appends PS1 to /etc/sandbox-persistent.sh at install
-└── statusline-kit/
-    ├── spec.yaml               kit spec, registers statusLine at install
-    └── files/home/.claude/
-        └── statusline.sh       → /home/agent/.claude/statusline.sh
+├── statusline-kit/
+│   ├── spec.yaml               kit spec, registers statusLine at install
+│   └── files/home/.claude/
+│       └── statusline.sh       → /home/agent/.claude/statusline.sh
+├── git-guardrails-kit/
+│   ├── spec.yaml               kit spec, registers the PreToolUse hook at install
+│   └── files/home/.claude/hooks/
+│       └── git-guardrails.sh   → /home/agent/.claude/hooks/git-guardrails.sh
+└── access-audit-kit/
+    ├── spec.yaml               kit spec, registers PostToolUse + Notification hooks at install
+    └── files/home/.claude/hooks/
+        ├── access-audit.sh     → detects denials in tool results and permission prompts
+        └── record-denial.sh    → writes <repo>/.sbx/access-denials.{jsonl,md}
 ```
+
+## Destructive git guard
+
+`git-guardrails-kit` registers `git-guardrails.sh` as a Claude Code `PreToolUse` hook on `Bash`. It reads the
+command from the hook payload and exits 2 (block, reason handed back to the model) when it matches:
+
+`push --force` without `--force-with-lease`, `push --mirror/--delete/:branch`, `reset --hard`,
+`clean -f`, `checkout -- <path>` / `checkout .`, `restore <path>` (bare `--staged` is allowed),
+`switch --discard-changes`, `branch -D`, `stash drop/clear`, `reflog expire`, `gc --prune`,
+`update-ref -d`, `filter-branch`/`filter-repo`, `worktree remove --force`.
+
+Everything else, including a malformed payload or a missing `jq`, exits 0 — a broken hook must never
+wedge the sandbox's shell access. Matching is textual on the whole command string, so a command that
+merely *mentions* one of these (e.g. `git log --grep 'reset --hard'`) is blocked too.
+
+Turn it off in one sandbox from the host:
+
+```shell
+sbx exec <sandbox> -- touch /home/agent/.claude/.git-guardrails-off
+```
+
+It is an accident guard, not a security boundary: the agent can create that file itself.
+
+## Denied access audit
+
+`access-audit-kit` records what the sandbox refused, so you can decide what to grant instead of
+guessing. Two hooks, both silent and always exit 0:
+
+| Event                            | Catches                                                            |
+| -------------------------------- | ------------------------------------------------------------------ |
+| `PostToolUse` (Bash/WebFetch/…)  | sbx proxy denials — `Blocked by network policy: domain host:port`  |
+| `Notification`                   | Claude Code permission prompts                                     |
+| (direct call)                    | `git-guardrails-kit` blocks, reported by that hook itself          |
+
+Output lands in the workspace, at the git root:
+
+```text
+<repo>/.sbx/access-denials.jsonl   one JSON object per event
+<repo>/.sbx/access-denials.md      counts per target + the commands to grant them
+<repo>/.sbx/.gitignore             "*", created on first write — this is not repo content
+```
+
+`access-denials.md` ends with ready-to-run host commands, e.g.:
+
+```shell
+sbx policy allow network --sandbox claude-my-project "registry.npmjs.org:443"
+```
+
+For network denials the host-side ground truth is the proxy's own log — the in-sandbox hook cannot
+read it, since `sbx` is not installed in the sandbox:
+
+```shell
+sbx policy log <sandbox>
+```
+
+A call blocked at `PreToolUse` never reaches `PostToolUse`, so tool calls Claude Code refuses itself
+show up as permission *prompts* rather than as denials. Network blocks are exact.
 
 ## Install
 
@@ -36,8 +104,8 @@ cd ~/my-project
 sbxc
 ```
 
-The sandbox is named `claude-<directory>` and both `shell-prompt-kit/` and
-`statusline-kit/` are applied at creation. Every argument is forwarded straight
+The sandbox is named `claude-<directory>` and `shell-prompt-kit/`, `statusline-kit/`,
+`git-guardrails-kit/` and `access-audit-kit/` are applied at creation. Every argument is forwarded straight
 through to `claude` (via `sbx run -- ...`):
 
 ```shell
@@ -81,6 +149,10 @@ sandbox.
 
 The statusline is the kit's job rather than the script's, so it travels with the
 kit and applies to any sandbox that loads it.
+
+Its cwd segment is shortened when long: `$HOME` → `~`, then leading components are dropped until the
+path fits, keeping the deepest ones (`…/Obsidian/personal-obsidian-vault`). The limit is 32 characters,
+override with `SBX_STATUSLINE_MAX_DIR`.
 
 ## Gotchas
 

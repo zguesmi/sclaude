@@ -81,6 +81,8 @@ create_sandbox() {
     sbx create --name "$SANDBOX_NAME" \
         --kit "$KITS_DIR/shell-prompt-kit" \
         --kit "$KITS_DIR/statusline-kit" \
+        --kit "$KITS_DIR/git-guardrails-kit" \
+        --kit "$KITS_DIR/access-audit-kit" \
         "${SBX_CREATE_ARGS[@]}" \
         "$AGENT" . >/dev/null && ok "sandbox created"
 }
