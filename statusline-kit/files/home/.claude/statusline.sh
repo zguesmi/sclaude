@@ -125,10 +125,10 @@ if [ -n "$five_pct" ]; then
     [ "$five_int" -gt 0 ] && parts+=("$(printf '\033[90m5h:%d%%\033[0m' "$five_int")")
 fi
 
-# cost so far, USD
-if [ -n "$cost" ]; then
-    parts+=("$(awk -v c="$cost" 'BEGIN{printf "\033[32m$%.2f\033[0m", c}')")
-fi
+# # cost so far, USD
+# if [ -n "$cost" ]; then
+#     parts+=("$(awk -v c="$cost" 'BEGIN{printf "\033[32m$%.2f\033[0m", c}')")
+# fi
 
 # caveman badge (already colored, append as-is)
 [ -n "$caveman_badge" ] && parts+=("$caveman_badge")
