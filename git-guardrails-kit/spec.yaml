@@ -1,0 +1,30 @@
+schemaVersion: "2"
+kind: mixin
+name: git-guardrails-kit
+displayName: Destructive git guardrails
+description: Registers a Claude Code PreToolUse hook that blocks destructive git commands (force push, reset --hard, clean -f, branch -D, reflog expire, ...) inside the sandbox.
+
+commands:
+  install:
+    - description: |
+        Register /home/agent/.claude/hooks/git-guardrails.sh as a PreToolUse hook for Bash in
+        ~/.claude/settings.json via a jq merge, so every other key (and every other hook)
+        is preserved. Any earlier entry pointing at the same script is dropped first, so
+        re-applying the kit does not stack duplicates.
+      command: |
+        set -e
+        mkdir -p /home/agent/.claude/hooks
+        f=/home/agent/.claude/settings.json
+        [ -f "$f" ] || echo '{}' > "$f"
+        # Temp file in the same dir as $f so the mv is an atomic rename.
+        tmp=$(mktemp -p /home/agent/.claude)
+        jq --arg cmd /home/agent/.claude/hooks/git-guardrails.sh '
+          .hooks //= {}
+          | .hooks.PreToolUse = (
+              ((.hooks.PreToolUse // [])
+                | map(select(((.hooks // []) | map(.command) | index($cmd)) == null)))
+              + [{matcher: "Bash", hooks: [{type: "command", command: $cmd}]}]
+            )
+        ' "$f" > "$tmp"
+        mv "$tmp" "$f"
+      user: "1000"
