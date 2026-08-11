@@ -56,3 +56,9 @@ sbx exec <sandbox> -- touch /home/agent/.claude/.git-guardrails-off
 
 `<repo>/.sbx/access-denials.md` counts each refused target and ends with the `sbx policy allow
 network` commands to grant them. Host-side ground truth is `sbx policy log <sandbox>`.
+
+## Credentials
+
+Every sandbox uses the global Anthropic subscription; `sbx secret set anthropic --sandbox <sandbox>`
+gives one its own API key instead. A second *subscription* can't be scoped that way — sbx stores OAuth
+secrets globally only.

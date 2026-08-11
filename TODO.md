@@ -1,2 +1,1 @@
 - Make the kit name bg color change according to the coding agent (claude, codex, ...).
-- Per-account profiles (work / personal) — design pending
