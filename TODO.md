@@ -1,3 +1,2 @@
 - Make the kit name bg color change according to the coding agent (claude, codex, ...).
-- Use sclaude -r directly
 - Per-account profiles (work / personal) — design pending
