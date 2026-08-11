@@ -156,7 +156,13 @@ override with `SBX_STATUSLINE_MAX_DIR`.
 
 ## Gotchas
 
-Verified against `sbx v0.37.0`, not inferred from the docs.
+Verified against `sbx v0.38.0`, not inferred from the docs.
+
+- **The kit spec's top-level key is `setup:`, not `commands:`** — v0.38.0 renamed it and the parser
+  is strict, so a v0.37.0 spec fails sandbox creation outright with
+  `field commands not found in type spec.specFileV2`. Nesting is unchanged:
+  `setup.install[].{description,command,user}`. `sbx kit validate <dir>` reports the exact offending
+  line, and it rejects unknown nested fields too.
 
 - **`~/.claude/settings.json` must be _merged_, never overwritten** — the kit does a `jq` merge.
 - **A mixin's install commands run after the agent's own**, which is where that

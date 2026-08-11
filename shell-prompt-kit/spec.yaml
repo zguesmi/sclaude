@@ -4,7 +4,7 @@ name: shell-prompt-kit
 displayName: Sandbox shell prompt
 description: Bash prompt showing SBX, the sandbox name and the working directory, so it is obvious the shell is inside a sandbox.
 
-commands:
+setup:
   install:
     - description: |
         Append the PS1 definition to /etc/sandbox-persistent.sh, which every bash

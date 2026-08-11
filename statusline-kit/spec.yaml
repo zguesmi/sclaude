@@ -4,7 +4,7 @@ name: statusline-kit
 displayName: Claude Code statusline
 description: Adds a Claude Code statusline showing the sbx sandbox name, cwd, git branch, model, context %, rate limit and session cost.
 
-commands:
+setup:
   install:
     - description: |
         Set the statusLine key in ~/.claude/settings.json to ~/.claude/statusline.sh using

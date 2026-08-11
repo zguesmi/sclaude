@@ -27,7 +27,7 @@ access-audit-kit/files/home/.claude/hooks/
     record-denial.sh                        → shared writer for <repo>/.sbx/access-denials.{jsonl,md}
 ```
 
-A "kit" is an `sbx` mixin: a `spec.yaml` with `install` commands (run once, at sandbox creation) plus
+A "kit" is an `sbx` mixin: a `spec.yaml` with `setup.install` commands (run once, at sandbox creation) plus
 an optional `files/` tree that gets copied verbatim into the sandbox's home directory. `sbxc.sh`
 always loads `shell-prompt-kit`, `statusline-kit`, `git-guardrails-kit` and `access-audit-kit` from
 its own directory at creation time. By
@@ -128,7 +128,7 @@ target + copy-paste `sbx policy allow network` commands). `access-audit.sh` is r
 and branches on `.hook_event_name`:
 - `PostToolUse` (`Bash|WebFetch|WebSearch`) — where sbx proxy denials surface. The proxy answers a
   blocked request with HTTP 403 and the body `Blocked by network policy: domain <host>:<port>` (verified
-  against v0.37.0 by curling a blocked host from inside a sandbox), so the hook greps
+  against v0.37.0/v0.38.0 by curling a blocked host from inside a sandbox), so the hook greps
   `Blocked by <word> policy: <word> <resource>` out of the flattened tool result and files each hit
   under the policy word as its kind — one `network` row per host:port.
 - `Notification` — permission prompts. A call blocked at `PreToolUse` never reaches `PostToolUse`, so a
@@ -154,7 +154,11 @@ tool output instead.
   these rather than inlining new ANSI escapes in `sbxc.sh`.
 - Idempotency is done ad hoc: `setting_is` / grep-ing `sbx secret ls` / `sandbox_exists` checks before
   each optional step, so re-running against an already-configured host stays silent.
-- Everything here is validated against a specific `sbx` CLI version (currently v0.37.0, noted in
+- The kit spec's top-level key is `setup:` (v0.38.0). It was `commands:` in v0.37.0 and the YAML
+  parser is strict — an outdated key fails `sbx create` with
+  `field commands not found in type spec.specFileV2`, and unknown nested keys fail the same way.
+  Run `sbx kit validate <kit-dir>` after touching a `spec.yaml`; it names the offending line.
+- Everything here is validated against a specific `sbx` CLI version (currently v0.38.0, noted in
   README's Gotchas section) rather than derived from `sbx`'s own docs — if `sbx` behavior seems to
   contradict a comment, assume the comment is the more reliable source and flag the discrepancy
   rather than silently "fixing" it.

@@ -4,7 +4,7 @@ name: git-guardrails-kit
 displayName: Destructive git guardrails
 description: Registers a Claude Code PreToolUse hook that blocks destructive git commands (force push, reset --hard, clean -f, branch -D, reflog expire, ...) inside the sandbox.
 
-commands:
+setup:
   install:
     - description: |
         Register /home/agent/.claude/hooks/git-guardrails.sh as a PreToolUse hook for Bash in
