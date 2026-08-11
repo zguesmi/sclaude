@@ -7,9 +7,31 @@ input=$(cat)
 sbx_name=""
 [ "${IS_SANDBOX:-}" = "1" ] && sbx_name="${SANDBOX_VM_ID:-$(hostname)}"
 
-# --- directory (full path of cwd) ---
+# --- directory (path, shortened when long) ---
 cwd=$(echo "$input" | jq -r '.workspace.current_dir // empty')
 dir="$cwd"
+
+# $HOME -> ~, then drop leading components until it fits, so the deepest (most
+# informative) part of the path is what survives: ~/Personal/Obsidian/vault -> …/Obsidian/vault
+case "$dir" in
+    "$HOME") dir="~" ;;
+    "$HOME"/*) dir="~${dir#"$HOME"}" ;;
+esac
+max=${SBX_STATUSLINE_MAX_DIR:-32}
+if [ "${#dir}" -gt "$max" ]; then
+    IFS='/' read -ra __comps <<< "$dir"
+    kept=""
+    for ((i = ${#__comps[@]} - 1; i >= 0; i--)); do
+        [ -z "${__comps[i]}" ] && continue
+        cand="/${__comps[i]}$kept"
+        # -1 leaves room for the "…" prefix
+        [ "${#cand}" -gt "$((max - 1))" ] && break
+        kept="$cand"
+    done
+    # A single component longer than $max still has to be shown in full.
+    [ -n "$kept" ] || kept="/${__comps[${#__comps[@]} - 1]}"
+    dir="…$kept"
+fi
 
 # --- git branch (skip optional locks) ---
 branch=""
