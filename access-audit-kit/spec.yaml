@@ -1,0 +1,31 @@
+schemaVersion: "2"
+kind: mixin
+name: access-audit-kit
+displayName: Denied access audit log
+description: Records every access the sandbox denies (blocked network hosts, permission refusals, git guardrail blocks) into <repo>/.sbx/access-denials.{jsonl,md}, with ready-to-run commands for granting what the project actually needs.
+
+commands:
+  install:
+    - description: |
+        Register /home/agent/.claude/hooks/access-audit.sh for PostToolUse (tools that can
+        hit the network) and Notification (permission prompts) in ~/.claude/settings.json
+        via a jq merge, so every other key and every other hook is preserved. Entries
+        already pointing at this script are dropped first, so re-applying does not stack
+        duplicates.
+      command: |
+        set -e
+        mkdir -p /home/agent/.claude/hooks
+        f=/home/agent/.claude/settings.json
+        [ -f "$f" ] || echo '{}' > "$f"
+        # Temp file in the same dir as $f so the mv is an atomic rename.
+        tmp=$(mktemp -p /home/agent/.claude)
+        jq --arg cmd /home/agent/.claude/hooks/access-audit.sh '
+          def drop_ours: map(select(((.hooks // []) | map(.command) | index($cmd)) == null));
+          .hooks //= {}
+          | .hooks.PostToolUse = (((.hooks.PostToolUse // []) | drop_ours)
+              + [{matcher: "Bash|WebFetch|WebSearch", hooks: [{type: "command", command: $cmd}]}])
+          | .hooks.Notification = (((.hooks.Notification // []) | drop_ours)
+              + [{hooks: [{type: "command", command: $cmd}]}])
+        ' "$f" > "$tmp"
+        mv "$tmp" "$f"
+      user: "1000"
