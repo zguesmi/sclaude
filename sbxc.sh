@@ -55,6 +55,9 @@ sandbox_exists() {
 setting_is() { [ "$(sbx settings get "$1" 2>/dev/null)" = "$2" ]; }
 
 # Appends to /etc/sandbox-persistent.sh, sourced before every bash in the sandbox.
+# Nothing calls this right now (sbx seeds the git identity by itself, see main());
+# kept because it is the injection point for per-sandbox env, e.g. the work/personal
+# profile token in TODO.md.
 append_to_persistent_sh_file() {
     sbx exec -i "$SANDBOX_NAME" bash -c 'cat >> /etc/sandbox-persistent.sh'
 }
@@ -87,15 +90,6 @@ create_sandbox() {
         "$AGENT" . >/dev/null && ok "sandbox created"
 }
 
-set_git_identity() {
-    GIT_USER_NAME=$(git config --global user.name)
-    GIT_USER_EMAIL=$(git config --global user.email)
-    GIT_COMMANDS="git config --global user.name \"$GIT_USER_NAME\""$'\n'
-    GIT_COMMANDS+="git config --global user.email \"$GIT_USER_EMAIL\""
-    printf '%s\n' "$GIT_COMMANDS" | append_to_persistent_sh_file
-    ok "git identity  ${GREY}$GIT_USER_NAME <$GIT_USER_EMAIL>${RESET}"
-}
-
 run_sandbox() {
     run "Claude Code"
     exec sbx run --name "$SANDBOX_NAME" -- "${CLAUDE_ARGS[@]}"
@@ -110,7 +104,9 @@ main() {
         set_host_config
         set_github_token
         create_sandbox
-        set_git_identity
+        # No git identity step: sbx itself seeds /home/agent/.gitconfig from the host's
+        # global config at create (verified on v0.38.0 with a bare, kit-less sandbox).
+        # It does not copy the credential helpers, which is what set_github_token is for.
     fi
     run_sandbox
 }

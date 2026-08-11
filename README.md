@@ -141,8 +141,12 @@ On a **new** sandbox, `sbxc.sh` runs these steps (steps already satisfied stay s
 | Image paste allowed | `sbx settings set clipboard.imagePaste true`                                     |
 | Local kits allowed  | `sbx settings set kit.allowLocalKits true`                                       |
 | GitHub over HTTPS   | `gh auth token \| sbx secret set -g github`                                      |
-| Git identity        | `git config --global user.{name,email}` appended to `/etc/sandbox-persistent.sh` |
 | Shell prompt        | powerline `PS1` with: `SBX`, sandbox name, cwd                                    |
+
+Git identity is *not* one of the steps: `sbx` already writes `/home/agent/.gitconfig` at create with
+`user.name` / `user.email` from the host's global config (plus `core.excludesFile` and a
+`safe.directory` for the workspace). It does not copy git's credential helpers, which is why the
+`github` secret above is still needed for HTTPS pushes.
 
 `/etc/sandbox-persistent.sh` is sourced before every bash invocation in the
 sandbox.

@@ -65,7 +65,7 @@ call is commented out in `main()`.)
 **Two persistence mechanisms inside a sandbox, used for different things:**
 
 1. `/etc/sandbox-persistent.sh` — sourced before *every* bash invocation in the sandbox. `sbxc.sh`
-   appends to it (git identity) rather than overwriting, since multiple install steps and kits share
+   Anything appending to it must append rather than overwrite, since multiple install steps and kits share
    this one file. This is also why shell completion scripts must never be appended here (they
    reference `COMP_WORDS`/`COMPREPLY`, which don't exist outside an actual completion context, and
    sourcing them on every command breaks bash entirely).
@@ -87,8 +87,8 @@ call is commented out in `main()`.)
 **`sbxc.sh` control flow**: `"$@"` is split up front on the first literal `--` into `CLAUDE_ARGS`
 (before) and `SBX_CREATE_ARGS` (after) — both module-level arrays, read directly by the functions
 below rather than passed around. `main()` (at the bottom) checks if the sandbox already exists
-(`sandbox_exists`, via `sbx ls`) → if new, runs host config, GitHub token provisioning,
-`create_sandbox` (bundled kits + `SBX_CREATE_ARGS`), and git identity injection, in that order; if it
+(`sandbox_exists`, via `sbx ls`) → if new, runs host config, GitHub token provisioning and
+`create_sandbox` (bundled kits + `SBX_CREATE_ARGS`), in that order; if it
 already exists and `SBX_CREATE_ARGS` is non-empty, warns that those args are being ignored (they only
 mean something at creation) → always ends by `exec`-ing into
 `sbx run --name <name> -- "${CLAUDE_ARGS[@]}"` (`run_sandbox`). Setup is one-shot per sandbox, not
@@ -154,6 +154,11 @@ tool output instead.
   these rather than inlining new ANSI escapes in `sbxc.sh`.
 - Idempotency is done ad hoc: `setting_is` / grep-ing `sbx secret ls` / `sandbox_exists` checks before
   each optional step, so re-running against an already-configured host stays silent.
+- `sbx` seeds the sandbox's git identity itself: at create it writes `/home/agent/.gitconfig` with
+  `user.name` / `user.email` copied from the host's global config, plus `core.excludesFile`,
+  `core.checkStat` and a `safe.directory` for the workspace (verified on v0.38.0 in a bare sandbox
+  created with no kits). So `sbxc.sh` has no git-identity step — don't add one back. Credential
+  helpers are *not* copied, which is what the `github` secret covers.
 - The kit spec's top-level key is `setup:` (v0.38.0). It was `commands:` in v0.37.0 and the YAML
   parser is strict — an outdated key fails `sbx create` with
   `field commands not found in type spec.specFileV2`, and unknown nested keys fail the same way.
