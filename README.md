@@ -15,16 +15,28 @@ pushed.
 
 ## Install
 
-Needs `sbx`, `jq`, and `gh` on the host, plus git access to this repo (sbx fetches the kits with the
-host's credentials, so a private repo works).
+Needs `sbx` and `jq` on the host (plus `gh`, for the last setting below), and git access to this repo
+(sbx fetches the kits with the host's credentials, so a private repo works).
 
 ```shell
 curl -fsSL https://raw.githubusercontent.com/zguesmi/sbx-test/master/sbxc.sh -o ~/.local/bin/sbxc
 chmod +x ~/.local/bin/sbxc
-sbxc setup   # host-wide sbx settings + the github secret, once per machine
 ```
 
-`sbxc setup` appends `github.com/zguesmi/` to `kit.allowedSources`, without which sbx refuses the kits.
+Then three host-wide `sbx` settings, once per machine. They are yours to run, not wrapped by `sbxc`:
+
+```shell
+# Add github repo as kits source
+sbx settings set kit.allowedSources '["docker.io/","github.com/zguesmi/"]'
+
+# Paste images into Claude from the host clipboard.
+sbx settings set clipboard.imagePaste true
+
+# Provide a GitHub auth token to sbx sandboxes.
+gh auth token | sbx secret set -g github
+```
+
+Check them with `sbx settings get ...` and `sbx secret ls`.
 
 ## Usage
 

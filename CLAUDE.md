@@ -9,21 +9,28 @@ if `sbx` seems to contradict a note here, flag the discrepancy rather than silen
 
 ## Wrapper invariants
 
-- The wrapper's whole job is the kit list plus `sbxc setup`. Prefer deleting a feature over
-  reimplementing what `sbx` does; `"$@"` is forwarded to `sbx run` unparsed, deliberately — host-side
-  flag routing would mean tracking `sbx`'s flag list.
+- The wrapper's whole job is the kit list. Prefer deleting a feature over reimplementing what `sbx`
+  does; `"$@"` is forwarded to `sbx run` unparsed, deliberately — host-side flag routing would mean
+  tracking `sbx`'s flag list. Host-wide settings are documented in README as plain `sbx` commands
+  rather than wrapped: they run once per machine, and idempotence guards around three one-liners cost
+  more than they save.
 - `sbx` owns sandbox naming (`<agent>-<workdir>`) and resolves by *workspace*. Never pass `--name` or
   re-derive one: `sandbox_exists()` asks `sbx ls --json` whether a `claude` sandbox lists `$PWD`.
-- `--kit` is rejected on an existing sandbox, which is the only reason the wrapper branches at all.
+- `--kit` is rejected on an existing sandbox, the only thing the wrapper decides: it prepends the kits
+  to `$@` with `set --` for a fresh workspace, then `exec`s one command. Prefer that over an
+  `if`/`else` around two near-identical `exec`s — and over an array emptied on one path, since
+  `"${arr[@]}"` on an empty array is an unbound-variable error under `set -u` on bash 3.2 (macOS).
 - Kits are remote git references, `git+<repo>#ref=master&dir=<kit>` — the only syntax v0.38.0 accepts
   for git (plain `https://…//subdir`, `git::…`, and `git@…` all fall through to the OCI puller and
   fail). So `sbxc.sh` is self-contained, and a kit edit only reaches a new sandbox once pushed.
-- Remote kits need their prefix in `kit.allowedSources` (default `["docker.io/"]`); `setup()` merges
-  `github.com/zguesmi/` in rather than assigning, since the list is shared.
+- Remote kits need their prefix in `kit.allowedSources` (default `["docker.io/"]`), which is why the
+  README documents that setting as the full list — the list is shared, so an assignment that drops
+  `docker.io/` breaks other sources.
 - `sbx` seeds `/home/agent/.gitconfig` (identity, `core.excludesFile`, `core.checkStat`,
   `safe.directory`) at create — don't add a git-identity step back. It does *not* copy credential
-  helpers; that's what the `github` secret in `setup()` covers.
-- Launch path prints nothing and has no output helpers; `setup()` uses plain `echo`.
+  helpers; that's what the global `github` secret covers.
+- `sbxc.sh` is launch-only: it prints nothing, has no output helpers, and `exec`s `sbx run` on both
+  branches.
 
 ## Kit invariants
 
