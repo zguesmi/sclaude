@@ -40,7 +40,7 @@ Kits apply at creation only; add one to a live sandbox with `sbx kit add <sandbo
 
 ## Guardrails
 
-Blocked: `push --force` (without `--force-with-lease`), `push --mirror/--delete/:branch`,
+Blocked: `push --force`/`-f`/`--force-with-lease`/`--force-if-includes`, `push --mirror/--delete/:branch`,
 `reset --hard`, `clean -f`, `checkout -- <path>`, `restore <path>`, `switch --discard-changes`,
 `branch -D`, `stash drop/clear`, `reflog expire`, `gc --prune`, `update-ref -d`,
 `filter-branch`/`filter-repo`, `worktree remove --force`. Matching is textual on the whole command, so

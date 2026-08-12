@@ -54,8 +54,10 @@ has '(^|[;&|(]|&&|\|\|) *(sudo +)?git( |$)' || exit 0
 
 # --- history rewriting on a remote -------------------------------------------
 if has 'git( -[^ ]+)* push( |$)'; then
-    if has '(--force( |$)|(^| )-f( |$))' && ! has '(--force-with-lease|--force-if-includes)'; then
-        deny 'git push --force' 'Use --force-with-lease so a concurrent push is not silently overwritten.'
+    # --force-with-lease and --force-if-includes are blocked too: they only guard the
+    # remote-side race, and still rewrite history other clones already have.
+    if has '(--force(-with-lease|-if-includes)?([ =]|$)|(^| )-f( |$))'; then
+        deny 'git push --force' 'Force-pushing rewrites published history, --force-with-lease included.'
     fi
     has 'push[^;&|]* --mirror' && deny 'git push --mirror' 'A mirror push can delete every remote ref that is missing locally.'
     has 'push[^;&|]* --delete' && deny 'git push --delete' 'Deleting a remote branch is not reversible from here.'
