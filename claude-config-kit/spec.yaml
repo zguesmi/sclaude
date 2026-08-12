@@ -1,0 +1,57 @@
+schemaVersion: "2"
+kind: mixin
+name: claude-config-kit
+displayName: Claude settings and skill plugins
+description: |
+    Sets the sandbox's Claude Code settings and installs global plugins (superpowers, caveman, mattpocock-skills)
+        - Session recap: off
+        - TUI: default
+        - Default model: Opus
+
+setup:
+  install:
+    - description: Set config in ~/.claude/settings.json via a jq merge.
+      command: |
+        set -e
+        f=/home/agent/.claude/settings.json
+        # Temp file in the same dir as $f so the mv is an atomic rename.
+        tmp=$(mktemp -p /home/agent/.claude)
+        jq '.awaySummaryEnabled = false | .tui = "default" | .model = "opus"' "$f" > "$tmp"
+        mv "$tmp" "$f"
+      user: "1000"
+    - description: |
+        Install the global skill plugins if not already present.
+        Re-applying the kit is a no-op.
+        Each install is best-effort, the sandbox is created in all cases.
+      command: |
+        set -e
+
+        MARKETPLACES="anthropics/claude-plugins-official juliusbrussee/caveman"
+        PLUGINS="superpowers@claude-plugins-official
+                 mattpocock-skills@claude-plugins-official
+                 caveman@caveman"
+
+        known=$(claude plugin marketplace list --json 2>/dev/null || echo '[]')
+        for repo in $MARKETPLACES; do
+            if printf '%s' "$known" |
+                jq -e --arg r "$repo" 'any(.[]; .repo == $r)' >/dev/null; then
+                echo "✓ $repo: already known"
+            elif claude plugin marketplace add "$repo" >/dev/null; then
+                echo "✓ $repo: added"
+            else
+                echo "✗ $repo: add failed" >&2
+            fi
+        done
+
+        installed=$(claude plugin list --json 2>/dev/null || echo '[]')
+        for id in $PLUGINS; do
+            if printf '%s' "$installed" |
+                jq -e --arg id "$id" 'any(.[]; .id == $id)' >/dev/null; then
+                echo "✓ $id: already installed"
+            elif claude plugin install "$id" --scope user >/dev/null; then
+                echo "✓ $id: installed"
+            else
+                echo "✗ $id: install failed" >&2
+            fi
+        done
+      user: "1000"

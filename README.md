@@ -11,6 +11,7 @@ pushed.
 | `statusline-kit`     | statusline: cwd, branch, model, context %, rate limit, session cost   |
 | `git-guardrails-kit` | `PreToolUse` hook blocking destructive git commands                   |
 | `access-audit-kit`   | logs refused access to `<repo>/.sbx/access-denials.md`                |
+| `claude-config-kit`  | settings (recap off, default TUI, opus) + generic skill plugins        |
 
 ## Install
 
@@ -56,6 +57,20 @@ sbx exec <sandbox> -- touch /home/agent/.claude/.git-guardrails-off
 
 `<repo>/.sbx/access-denials.md` counts each refused target and ends with the `sbx policy allow
 network` commands to grant them. Host-side ground truth is `sbx policy log <sandbox>`.
+
+## Skills
+
+`claude-config-kit` registers both marketplaces (`anthropics/claude-plugins-official` and
+`juliusbrussee/caveman` — a fresh sandbox knows neither) and installs `superpowers`,
+`mattpocock-skills` and `caveman` with `claude plugin install` at creation. Add one by editing the
+two lists in the kit; every step is skipped when already present, and installs are best-effort, so a
+marketplace outage costs you a plugin, not the sandbox.
+
+Project-specific skills belong in the project's own `.claude/skills/<name>/SKILL.md`, committed with
+its code: the workspace is bind-mounted, so the sandbox picks them up with nothing installed. Loose
+host skills in `~/.claude/skills` reach the sandbox through sbx's own store — `sbx skills import`
+copies them in, and the store is mounted read-write at `/home/agent/.claude/skills` in *every*
+sandbox.
 
 ## Credentials
 

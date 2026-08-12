@@ -39,6 +39,30 @@ if `sbx` seems to contradict a note here, flag the discrepancy rather than silen
   never overwrite. Never append completion scripts — they reference `COMP_WORDS`/`COMPREPLY` and break
   every shell.
 
+## Claude config invariants
+
+- Plugins are installed with the CLI, not declared: an external plugin listed only under
+  `enabledPlugins` is reported as *not installed* and Claude prints the `claude plugin install`
+  command instead.
+- **Every** marketplace must be added explicitly, `claude-plugins-official` included. Claude Code
+  registers it on its first *interactive* start, which a sandbox being created has never had — a live
+  sandbox lists it only because a session ran there. Verified on a fresh one: without the add, both
+  official installs fail and only `caveman` lands. The `caveman` marketplace is absent for a second
+  reason: it lives in the host `extraKnownMarketplaces`, part of the `settings.json` sbx never copies
+  (a hook in it could feed the sandboxed agent instructions).
+- Install steps run under `sh`, not bash (`$0` says so): `<<<` is a parse error, and the resulting
+  exit 2 aborts `sbx create` before any guard can run. Keep them POSIX.
+- An install step inherits the agent's PATH with `/home/agent/.local/bin` first, so plain `claude`
+  resolves — no absolute path needed. Their stdout is not echoed by `sbx create`; to see what a step
+  printed, write to a file and `sbx exec ... cat` it.
+- Installs are guarded on `--json` output (`.[].repo` for marketplaces, `.[].id` for plugins) and
+  best-effort: a fetch failure warns and continues, since a marketplace outage must not abort
+  `sbx create`. The settings merge above it stays strict.
+- The settings step runs *before* the installs: `claude plugin install --scope user` rewrites
+  `settings.json` for the keys it owns, so it should be the last writer.
+- `model` is read once at session start, and install steps run before the agent starts, so it applies
+  to the sandbox's first session.
+
 ## Hook invariants
 
 - `git-guardrails.sh` (`PreToolUse` on Bash) `exit 2`s to block, stderr going back to the model.

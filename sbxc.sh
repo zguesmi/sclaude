@@ -12,6 +12,7 @@ KITS=(
     --kit "git+$REPO#ref=master&dir=statusline-kit"
     --kit "git+$REPO#ref=master&dir=git-guardrails-kit"
     --kit "git+$REPO#ref=master&dir=access-audit-kit"
+    --kit "git+$REPO#ref=master&dir=claude-config-kit"
 )
 
 # Host-wide, hence a one-off rather than part of every launch.
