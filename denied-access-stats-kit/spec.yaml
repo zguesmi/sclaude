@@ -1,6 +1,6 @@
 schemaVersion: "2"
 kind: mixin
-name: access-audit-kit
+name: denied-access-stats-kit
 displayName: Denied access audit log
 description: Records every access the sandbox denies (blocked network hosts, permission refusals, git guardrail blocks) into <repo>/.sbx/access-denials.{jsonl,md}, with ready-to-run commands for granting what the project actually needs.
 

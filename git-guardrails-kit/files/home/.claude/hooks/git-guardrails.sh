@@ -12,7 +12,7 @@
 # This is an accident guard, not a security boundary — the agent can create that
 # file itself if it decides to.
 #
-# Every deny is also handed to access-audit-kit's recorder when that kit is
+# Every deny is also handed to denied-access-stats-kit's recorder when that kit is
 # installed, so the block shows up in the repo-local audit log. Optional by design:
 # the two kits stay independent and this one works alone.
 

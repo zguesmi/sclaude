@@ -1,17 +1,17 @@
-# sbxc
+# sclaude
 
 Thin wrapper over `sbx run`: launches Claude Code in the sandbox for the current directory, applying
-this repo's kits when that sandbox is created. `sbxc.sh` is self-contained — it fetches the kits from
+this repo's kits when that sandbox is created. `sclaude` is self-contained — it fetches the kits from
 this repo's `master` over git, so a kit change takes effect on the next sandbox created *after* it is
 pushed.
 
-| Kit                  | Adds                                                                  |
-| -------------------- | --------------------------------------------------------------------- |
-| `shell-prompt-kit`   | powerline `PS1` (`SBX`, sandbox name, cwd)                            |
-| `statusline-kit`     | statusline: cwd, branch, model, context %, rate limit, session cost   |
-| `git-guardrails-kit` | `PreToolUse` hook blocking destructive git commands                   |
-| `access-audit-kit`   | logs refused access to `<repo>/.sbx/access-denials.md`                |
-| `claude-config-kit`  | settings (recap off, default TUI, opus) + generic skill plugins        |
+| Kit                        | Adds                                                                |
+| -------------------------- | ------------------------------------------------------------------- |
+| `shell-prompt-kit`         | powerline `PS1` (`SBX`, sandbox name, cwd)                          |
+| `statusline-kit`           | statusline: cwd, branch, model, context %, rate limit, session cost |
+| `git-guardrails-kit`       | `PreToolUse` hook blocking destructive git commands                 |
+| `denied-access-stats-kit`  | logs refused access to `<repo>/.sbx/access-denials.md`              |
+| `claude-config-kit`        | settings (recap off, default TUI, opus) + generic skill plugins      |
 
 ## Install
 
@@ -19,11 +19,11 @@ Needs `sbx` and `jq` on the host (plus `gh`, for the last setting below), and gi
 (sbx fetches the kits with the host's credentials, so a private repo works).
 
 ```shell
-curl -fsSL https://raw.githubusercontent.com/zguesmi/sbx-test/master/sbxc.sh -o ~/.local/bin/sbxc
-chmod +x ~/.local/bin/sbxc
+curl -fsSL https://raw.githubusercontent.com/zguesmi/sclaude/master/sclaude -o ~/.local/bin/sclaude
+chmod +x ~/.local/bin/sclaude
 ```
 
-Then three host-wide `sbx` settings, once per machine. They are yours to run, not wrapped by `sbxc`:
+Then three host-wide `sbx` settings, once per machine. They are yours to run, not wrapped by `sclaude`:
 
 ```shell
 # Add github repo as kits source
@@ -43,10 +43,10 @@ Check them with `sbx settings get ...` and `sbx secret ls`.
 Arguments go to `sbx run` verbatim; Claude's own go after `--`.
 
 ```shell
-sbxc                      # claude here, creating the sandbox on first run
-sbxc -- -r                # claude -r
-sbxc --kit /path/to/kit   # extra kit, only when creating
-sbxc /path/to/docs:ro     # extra read-only workspace
+sclaude                      # claude here, creating the sandbox on first run
+sclaude -- -r                # claude -r
+sclaude --kit /path/to/kit   # extra kit, only when creating
+sclaude /path/to/docs:ro     # extra read-only workspace
 ```
 
 Kits apply at creation only; add one to a live sandbox with `sbx kit add <sandbox> <kit>`.

@@ -7,12 +7,12 @@
 
 set -euo pipefail
 
-REPO=https://github.com/zguesmi/sbx-test.git
+REPO=https://github.com/zguesmi/sclaude.git
 KITS=(
     --kit "git+$REPO#ref=master&dir=shell-prompt-kit"
     --kit "git+$REPO#ref=master&dir=statusline-kit"
     --kit "git+$REPO#ref=master&dir=git-guardrails-kit"
-    --kit "git+$REPO#ref=master&dir=access-audit-kit"
+    --kit "git+$REPO#ref=master&dir=denied-access-stats-kit"
     --kit "git+$REPO#ref=master&dir=claude-config-kit"
 )
 
