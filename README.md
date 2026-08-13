@@ -2,16 +2,16 @@
 
 Thin wrapper over `sbx run`: launches Claude Code in the sandbox for the current directory, applying
 this repo's kits when that sandbox is created. `sclaude` is self-contained — it fetches the kits from
-this repo's `master` over git, so a kit change takes effect on the next sandbox created *after* it is
+this repo's `master` over git, so a kit change takes effect on the next sandbox created _after_ it is
 pushed.
 
-| Kit                        | Adds                                                                |
-| -------------------------- | ------------------------------------------------------------------- |
-| `shell-prompt-kit`         | powerline `PS1` (`SBX`, sandbox name, cwd)                          |
-| `statusline-kit`           | statusline: cwd, branch, model, context %, rate limit, session cost |
-| `git-guardrails-kit`       | `PreToolUse` hook blocking destructive git commands                 |
-| `denied-access-stats-kit`  | logs refused access to `<repo>/.sbx/access-denials.md`              |
-| `claude-config-kit`        | settings (recap off, default TUI, opus) + generic skill plugins      |
+| Kit                       | Adds                                                                 |
+| ------------------------- | -------------------------------------------------------------------- |
+| `shell-prompt-kit`        | powerline `PS1` (`SBX`, sandbox name, cwd)                           |
+| `statusline-kit`          | statusline: cwd, branch, model, context %, rate limit, session cost  |
+| `git-guardrails-kit`      | `PreToolUse` hook blocking destructive git commands                  |
+| `denied-access-stats-kit` | logs refused access to `<repo>/.sbx/access-denials.md`               |
+| `claude-config-kit`       | settings (recap off, default TUI, opus), global `CLAUDE.md`, plugins |
 
 ## Install
 
@@ -78,14 +78,16 @@ network` commands to grant them. Host-side ground truth is `sbx policy log <sand
 two lists in the kit; every step is skipped when already present, and installs are best-effort, so a
 marketplace outage costs you a plugin, not the sandbox.
 
+It also ships `/home/agent/.claude/CLAUDE.md`, a project's own `CLAUDE.md` still applies on top of it.
+
 Project-specific skills belong in the project's own `.claude/skills/<name>/SKILL.md`, committed with
 its code: the workspace is bind-mounted, so the sandbox picks them up with nothing installed. Loose
 host skills in `~/.claude/skills` reach the sandbox through sbx's own store — `sbx skills import`
-copies them in, and the store is mounted read-write at `/home/agent/.claude/skills` in *every*
+copies them in, and the store is mounted read-write at `/home/agent/.claude/skills` in _every_
 sandbox.
 
 ## Credentials
 
 Every sandbox uses the global Anthropic subscription; `sbx secret set anthropic --sandbox <sandbox>`
-gives one its own API key instead. A second *subscription* can't be scoped that way — sbx stores OAuth
+gives one its own API key instead. A second _subscription_ can't be scoped that way — sbx stores OAuth
 secrets globally only.

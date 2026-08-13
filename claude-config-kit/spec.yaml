@@ -7,6 +7,7 @@ description: |
         - Session recap: off
         - TUI: default
         - Default model: Opus
+        - Global ~/.claude/CLAUDE.md
 
 setup:
   install:
