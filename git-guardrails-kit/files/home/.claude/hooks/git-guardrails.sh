@@ -11,10 +11,6 @@
 # from the host:  sbx exec <sandbox> -- touch /home/agent/.claude/.git-guardrails-off
 # This is an accident guard, not a security boundary — the agent can create that
 # file itself if it decides to.
-#
-# Every deny is also handed to denied-access-stats-kit's recorder when that kit is
-# installed, so the block shows up in the repo-local audit log. Optional by design:
-# the two kits stay independent and this one works alone.
 
 set -uo pipefail
 
@@ -26,9 +22,6 @@ cmd=$(printf '%s' "$input" | jq -r '.tool_input.command // empty' 2>/dev/null) |
 
 [ -f "${CLAUDE_CONFIG_DIR:-$HOME/.claude}/.git-guardrails-off" ] && exit 0
 
-cwd=$(printf '%s' "$input" | jq -r '.cwd // empty' 2>/dev/null)
-recorder="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/hooks/record-denial.sh"
-
 # Collapse newlines/runs of spaces so the patterns below also match commands that
 # were written across line continuations or with odd spacing.
 norm=$(printf '%s' "$cmd" | tr '\n\t' '  ' | tr -s ' ')
@@ -36,10 +29,6 @@ norm=$(printf '%s' "$cmd" | tr '\n\t' '  ' | tr -s ' ')
 has() { printf '%s' "$norm" | grep -Eq -- "$1"; }
 
 deny() {
-    # Best-effort audit trail; never let a missing/failing recorder change the verdict.
-    if [ -x "$recorder" ]; then
-        "$recorder" --kind git --target "$1" --detail "$2" --cwd "$cwd" --command "$cmd" >/dev/null 2>&1 || true
-    fi
     printf 'git-guardrails: blocked "%s".\n%s\n' "$1" "$2" >&2
     printf 'Ask the user to run it themselves if it is really needed.\n' >&2
     exit 2

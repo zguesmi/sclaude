@@ -10,7 +10,6 @@ pushed.
 | `shell-prompt-kit`        | powerline `PS1` (`SBX`, sandbox name, cwd)                           |
 | `statusline-kit`          | statusline: cwd, branch, model, context %, rate limit, session cost  |
 | `git-guardrails-kit`      | `PreToolUse` hook blocking destructive git commands                  |
-| `denied-access-stats-kit` | logs refused access to `<repo>/.sbx/access-denials.md`               |
 | `claude-config-kit`       | settings (recap off, default TUI, opus), global `CLAUDE.md`, plugins |
 
 ## Install
@@ -64,11 +63,6 @@ An accident guard, not a security boundary — turn it off with:
 ```shell
 sbx exec <sandbox> -- touch /home/agent/.claude/.git-guardrails-off
 ```
-
-## Audit
-
-`<repo>/.sbx/access-denials.md` counts each refused target and ends with the `sbx policy allow
-network` commands to grant them. Host-side ground truth is `sbx policy log <sandbox>`.
 
 ## Skills
 

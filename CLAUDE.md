@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-Host wrapper around `sbx`: one bash script, five kit specs. No build, no tests. See README.md.
+Host wrapper around `sbx`: one bash script, four kit specs. No build, no tests. See README.md.
 
 Validate by creating a sandbox. `sbx kit validate <kit-dir>` checks a spec. Notes below are verified
 against **sbx v0.38.0** — if `sbx` contradicts one, flag it, don't silently fix it.
@@ -25,7 +25,7 @@ against **sbx v0.38.0** — if `sbx` contradicts one, flag it, don't silently fi
   It also runs before `files/` is copied, so it cannot `chmod` a shipped file.
 - Steps run under `sh`. `<<<` is a parse error and its exit 2 aborts `sbx create`. Step stdout is
   hidden; write a file and `sbx exec … cat` it.
-- `~/.claude/settings.json` is shared by four kits: `jq` to a temp file in the same dir, then `mv`.
+- `~/.claude/settings.json` is shared by three kits: `jq` to a temp file in the same dir, then `mv`.
   Never overwrite. Hook kits append to `.hooks.<Event>` after dropping their own script's entry.
 - `/etc/sandbox-persistent.sh` is shared and sourced before every bash: append only. Never completion
   scripts — `COMP_WORDS`/`COMPREPLY` break every shell.
@@ -44,12 +44,6 @@ against **sbx v0.38.0** — if `sbx` contradicts one, flag it, don't silently fi
 - `git-guardrails.sh` (`PreToolUse`, Bash) `exit 2`s to block. Every other path exits 0 — a broken hook
   must not cut off shell access. `~/.claude/.git-guardrails-off` disables it. Patterns use `[^;&|]*` so
   no match spans chained commands.
-- `access-audit.sh` branches on `.hook_event_name`. `PostToolUse` greps the sbx proxy's 403 body.
-  `Notification` covers `PreToolUse` blocks, which never reach `PostToolUse` — that's why
-  `git-guardrails.sh` calls `record-denial.sh` itself, guarded by `[ -x … ] && … || true` to keep the
-  kits independent.
-- `record-denial.sh` locates the log from the payload's `.cwd`, serialises with `flock`, and gitignores
-  `.sbx/`. Both audit scripts exit 0 on every failure.
 
 ## Conventions
 
