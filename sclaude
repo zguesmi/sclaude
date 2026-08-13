@@ -3,7 +3,7 @@
 # Launch Claude Code in the sandbox for the current directory,
 # creating it with this repo's kits on first use.
 # Arguments go to `sbx run`, Claude's own go after `--`.
-# See README.md.
+
 
 set -euo pipefail
 
