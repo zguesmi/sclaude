@@ -4,8 +4,19 @@
 input=$(cat)
 
 # --- sbx sandbox name (IS_SANDBOX/SANDBOX_VM_ID set by sbx itself) ---
+# claude-<dir>-<account> is shown as "[Account] <dir>": the agent is already implied by the
+# badge, and the account reads better as its own tag. Names without a known account suffix
+# (sandboxes predating it) keep whatever is left after the prefix.
 sbx_name=""
-[ "${IS_SANDBOX:-}" = "1" ] && sbx_name="${SANDBOX_VM_ID:-$(hostname)}"
+sbx_account=""
+if [ "${IS_SANDBOX:-}" = "1" ]; then
+    sbx_name="${SANDBOX_VM_ID:-$(hostname)}"
+    sbx_name="${sbx_name#claude-}"
+    case "$sbx_name" in
+        *-perso) sbx_account="Perso"; sbx_name="${sbx_name%-perso}" ;;
+        *-work) sbx_account="Work"; sbx_name="${sbx_name%-work}" ;;
+    esac
+fi
 
 # --- directory (path, shortened when long) ---
 cwd=$(echo "$input" | jq -r '.workspace.current_dir // empty')
@@ -53,15 +64,6 @@ five_pct=$(echo "$input" | jq -r '.rate_limits.five_hour.used_percentage // empt
 # --- cost ---
 cost=$(echo "$input" | jq -r '.cost.total_cost_usd // empty')
 
-# --- connected account display name ---
-# Not part of the status line payload; read it from the Claude config instead.
-displayName=""
-for __cfg in "${CLAUDE_CONFIG_DIR:-}/.claude.json" "$HOME/.claude.json"; do
-    [ -f "$__cfg" ] || continue
-    displayName=$(jq -r '.oauthAccount.displayName // empty' "$__cfg" 2>/dev/null)
-    [ -n "$displayName" ] && break
-done
-
 # --- caveman badge ---
 caveman() {
     local FLAG="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/.caveman-active"
@@ -96,10 +98,8 @@ caveman_badge=$(caveman)
 parts=()
 
 # sbx sandbox badge (coral, matching shell-prompt-kit's SBX segment)
-[ -n "$sbx_name" ] && parts+=("$(printf '\033[38;5;173m[SBX] %s\033[0m' "$sbx_name")")
-
-# connected account
-[ -n "$displayName" ] && parts+=("$(printf '\033[35m%s\033[0m' "$displayName")")
+[ -n "$sbx_name" ] &&
+    parts+=("$(printf '\033[38;5;173m[SBX]%s %s\033[0m' "${sbx_account:+ [$sbx_account]}" "$sbx_name")")
 
 # model
 [ -n "$model" ] && parts+=("$(printf '\033[90m%s\033[0m' "$model ($effort)")")
