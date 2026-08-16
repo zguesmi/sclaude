@@ -9,12 +9,14 @@ input=$(cat)
 # (sandboxes predating it) keep whatever is left after the prefix.
 sbx_name=""
 sbx_account=""
+sbx_account_sgr=""
 if [ "${IS_SANDBOX:-}" = "1" ]; then
     sbx_name="${SANDBOX_VM_ID:-$(hostname)}"
     sbx_name="${sbx_name#claude-}"
+    # Bold, and a hue per account, so which subscription is paying reads at a glance.
     case "$sbx_name" in
-        *-perso) sbx_account="Perso"; sbx_name="${sbx_name%-perso}" ;;
-        *-work) sbx_account="Work"; sbx_name="${sbx_name%-work}" ;;
+        *-perso) sbx_account="Perso" sbx_account_sgr='1;38;5;215' sbx_name="${sbx_name%-perso}" ;;
+        *-work) sbx_account="Work" sbx_account_sgr='1;38;5;117' sbx_name="${sbx_name%-work}" ;;
     esac
 fi
 
@@ -98,8 +100,13 @@ caveman_badge=$(caveman)
 parts=()
 
 # sbx sandbox badge (coral, matching shell-prompt-kit's SBX segment)
-[ -n "$sbx_name" ] &&
-    parts+=("$(printf '\033[38;5;173m[SBX]%s %s\033[0m' "${sbx_account:+ [$sbx_account]}" "$sbx_name")")
+if [ -n "$sbx_name" ]; then
+    sbx_badge=$(printf '\033[38;5;173m[SBX]\033[0m')
+    [ -n "$sbx_account" ] &&
+        sbx_badge+=$(printf ' \033[%sm[%s]\033[0m' "$sbx_account_sgr" "$sbx_account")
+    sbx_badge+=$(printf ' \033[38;5;173m%s\033[0m' "$sbx_name")
+    parts+=("$sbx_badge")
+fi
 
 # model
 [ -n "$model" ] && parts+=("$(printf '\033[90m%s\033[0m' "$model ($effort)")")
