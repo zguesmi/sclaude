@@ -53,6 +53,15 @@ five_pct=$(echo "$input" | jq -r '.rate_limits.five_hour.used_percentage // empt
 # --- cost ---
 cost=$(echo "$input" | jq -r '.cost.total_cost_usd // empty')
 
+# --- connected account display name ---
+# Not part of the status line payload; read it from the Claude config instead.
+displayName=""
+for __cfg in "${CLAUDE_CONFIG_DIR:-}/.claude.json" "$HOME/.claude.json"; do
+    [ -f "$__cfg" ] || continue
+    displayName=$(jq -r '.oauthAccount.displayName // empty' "$__cfg" 2>/dev/null)
+    [ -n "$displayName" ] && break
+done
+
 # --- caveman badge ---
 caveman() {
     local FLAG="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/.caveman-active"
@@ -89,12 +98,8 @@ parts=()
 # sbx sandbox badge (coral, matching shell-prompt-kit's SBX segment)
 [ -n "$sbx_name" ] && parts+=("$(printf '\033[38;5;173m[SBX] %s\033[0m' "$sbx_name")")
 
-# directory + branch
-if [ -n "$branch" ]; then
-    parts+=("$(printf '\033[34m%s\033[0m \033[36m(%s)\033[0m' "$dir" "$branch")")
-else
-    parts+=("$(printf '\033[34m%s\033[0m' "$dir")")
-fi
+# connected account
+[ -n "$displayName" ] && parts+=("$(printf '\033[35m%s\033[0m' "$displayName")")
 
 # model
 [ -n "$model" ] && parts+=("$(printf '\033[90m%s\033[0m' "$model ($effort)")")
@@ -111,11 +116,11 @@ if [ -n "$used" ]; then
         fi
     fi
     if [ "$used_int" -ge 80 ]; then
-        parts+=("$(printf '\033[31mctx:%d%%%s\033[0m' "$used_int" "$tok_str")")
+        parts+=("$(printf '\033[31m%s(%d%%)\033[0m' "$tok_str" "$used_int")")
     elif [ "$used_int" -ge 50 ]; then
-        parts+=("$(printf '\033[33mctx:%d%%%s\033[0m' "$used_int" "$tok_str")")
+        parts+=("$(printf '\033[33m%s(%d%%)\033[0m' "$tok_str" "$used_int")")
     else
-        parts+=("$(printf '\033[32mctx:%d%%%s\033[0m' "$used_int" "$tok_str")")
+        parts+=("$(printf '\033[32m%s(%d%%)\033[0m' "$tok_str" "$used_int")")
     fi
 fi
 
@@ -123,6 +128,13 @@ fi
 if [ -n "$five_pct" ]; then
     five_int=$(printf '%.0f' "$five_pct")
     [ "$five_int" -gt 0 ] && parts+=("$(printf '\033[90m5h:%d%%\033[0m' "$five_int")")
+fi
+
+# directory + branch
+if [ -n "$branch" ]; then
+    parts+=("$(printf '\033[34m%s\033[0m \033[36m(%s)\033[0m' "$dir" "$branch")")
+else
+    parts+=("$(printf '\033[34m%s\033[0m' "$dir")")
 fi
 
 # # cost so far, USD
