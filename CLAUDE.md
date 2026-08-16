@@ -7,16 +7,46 @@ against **sbx v0.38.0** — if `sbx` contradicts one, flag it, don't silently fi
 
 ## Wrapper
 
-- Job is the kit list. Delete features rather than reimplement `sbx`. `"$@"` reaches `sbx run`
-  unparsed; don't route flags host-side.
-- `sbx` resolves sandboxes by *workspace*. Never pass `--name`.
-- `--kit` is rejected on an existing sandbox. Hence `set --` prepends kits, then one `exec`. Don't use
-  an array emptied on one path: empty `"${arr[@]}"` under `set -u` breaks bash 3.2 (macOS).
+- Job is the kit list and the account. Delete features rather than reimplement `sbx`. `"$@"` reaches
+  `sbx run` unparsed; don't route flags host-side — that is why the account is an env var, not a flag.
+- `sbx run` resolves by *name*, defaulting to `<agent>-<workdir>` — **not** by which sandbox already
+  holds the workspace. Omit `--name` and it builds a second, unsuffixed sandbox next to ours (seen:
+  `claude-tmp.X` and `claude-tmp.X-personal` sharing one workspace). So `--name` goes on both paths,
+  and existence is tested on the name, not the workspace.
+- `--kit` is rejected on an existing sandbox, so only kits are conditional. Hence `set --` prepends
+  them, then one `exec`. Don't use an array emptied on one path: empty `"${arr[@]}"` under `set -u`
+  breaks bash 3.2 (macOS).
 - Kits must be `git+<repo>#ref=master&dir=<kit>`. Other git syntaxes hit the OCI puller and fail. A kit
   edit only reaches new sandboxes once pushed.
 - Kit prefixes need `kit.allowedSources`. It is shared — never drop entries.
 - `sbx` seeds `/home/agent/.gitconfig`; add no git-identity step. It skips credential helpers — that's
   the global `github` secret.
+
+## Accounts
+
+- The account is the sandbox name suffix, `claude-<dir>-<account>`. `sbx` is write-only, so `sbx ls`
+  is the only record of it. `CLAUDE_ACCOUNT` is therefore required on *every* run — the name has to
+  be rebuilt to attach. Only the keyring read is create-only.
+- The secret must exist *before* creation: the env var is injected then and never again. Storing
+  against a running sandbox updates the proxy mapping but adds no env var, whatever the CLI prints.
+- `CLAUDE_ACCOUNT` is an exact match against `personal` or `work`, not a pattern. Adding one means
+  editing the `case` and enrolling its token.
+- Always `--sandbox`. A global anthropic secret forces api-key mode, which seeds an `apiKeyHelper` and
+  kills the claude.ai MCP connectors — `sclaude` refuses to run at all while one exists.
+- `set-custom` upserts on `--placeholder`. Omit it for a fresh mapping; pass one back only after
+  reading it from `sbx secret ls --sandbox <name>`, matched on a whole field. A substring match would
+  hand over a sibling's placeholder and silently overwrite it.
+- The sandbox only ever sees the `sbx-cs-…` placeholder. Never inject the real token.
+- Token reaches `sbx` through a `printf` builtin pipe: not argv, not exported, not a file. Keep it
+  that way — no `--value`, no temp file, no `export`.
+- Keyring reads happen on the create path only. A dedicated collection is used rather than `login`
+  so it starts locked at login; `sclaude` does not relock it.
+- `secret-tool` looks items up by *attribute* (`service sclaude account <name>`), not by label.
+  Seahorse can create the collection but cannot set attributes, so enrolment needs the CLI.
+- `store` accepts `--collection` even though its usage line omits it (verified, libsecret 0.21.7), but
+  only as an alias or a D-Bus object path — `--collection=sclaude` fails on
+  `/org/freedesktop/secrets/aliases/sclaude`. Hence `KEYRING_PATH`; its last segment is the keyring
+  filename, not the Seahorse label. `secret-tool lock --collection=<path>` relocks, no `gdbus` needed.
 
 ## Kits
 
@@ -48,3 +78,12 @@ against **sbx v0.38.0** — if `sbx` contradicts one, flag it, don't silently fi
 ## Conventions
 
 Bash, `set -euo pipefail`. The kit list is explicit, not globbed.
+
+Wrapper output borrows `sbx`'s glyphs (`→` step, `✓` result, `✗` failure) but prefixes a coral
+`[sclaude]` tag flush left, so the two logs stay tellable apart in one scrollback. `log()` wraps the
+message in grey; values inside it are `$WHITE` and return to `$GREY` after, so a line reads as a
+shape before it reads as words. Everything goes to stderr and drops colour off a tty;
+continuation lines indent by 14, the width of `[sclaude]  x  `. `sbx secret set-custom` narrates in
+three lines — capture it and show it only when it fails. The statusline renders
+`claude-<dir>-<account>` as `[SBX] [Account] <dir>`, the account bold in its own hue; an unknown
+suffix is left alone.
