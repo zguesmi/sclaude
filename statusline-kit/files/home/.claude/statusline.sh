@@ -15,7 +15,7 @@ if [ "${IS_SANDBOX:-}" = "1" ]; then
     sbx_name="${sbx_name#claude-}"
     # Bold, and a hue per account, so which subscription is paying reads at a glance.
     case "$sbx_name" in
-        *-perso) sbx_account="Perso" sbx_account_sgr='1;38;5;215' sbx_name="${sbx_name%-perso}" ;;
+        *-personal) sbx_account="Personal" sbx_account_sgr='1;38;5;215' sbx_name="${sbx_name%-personal}" ;;
         *-work) sbx_account="Work" sbx_account_sgr='1;38;5;117' sbx_name="${sbx_name%-work}" ;;
     esac
 fi
