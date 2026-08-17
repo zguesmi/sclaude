@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Launch Claude Code in the sandbox for the current directory, creating it on first use
-# with this repo's kits and the account named by CLAUDE_ACCOUNT.
+# with this repo's kits and the account picked at the prompt.
 # Arguments go to `sbx run`, Claude's own go after `--`.
 
 
@@ -15,6 +15,8 @@ KITS=(
     --kit "git+$REPO#ref=master&dir=claude-config-kit"
 )
 # Anthropic subscription management.
+# The accounts offered at the prompt; each needs its own keyring entry.
+ACCOUNTS=(personal work)
 # Keyring collection holding the personal and work Claude auth tokens.
 KEYRING=sclaude
 KEYRING_PATH=/org/freedesktop/secrets/collection/$KEYRING
@@ -30,6 +32,9 @@ ENV_VAR=CLAUDE_CODE_OAUTH_TOKEN
 [ -t 2 ] && RED=$'\033[31m' || RED=
 [ -t 2 ] && CYAN=$'\033[36m' || CYAN=
 [ -t 2 ] && OFF=$'\033[0m' || OFF=
+
+# Every line after the first — menu entries, wrapped errors — sits one indent in.
+INDENT='    '
 
 log() {
     printf "$CORAL[sclaude]$OFF $1 $2 $OFF $GREY%b$OFF\n" "$3" >&2
@@ -49,9 +54,59 @@ assert_no_global_anthropic_token() {
         die "global secret $WHITE$global_ant_secret$GREY forces anthropic api-key mode; remove it first"
 }
 
-sandbox_exists() {
-    sbx ls --json 2>/dev/null |
-        jq -e --arg n "$1" 'any((.sandboxes // [])[]; .name == $n)' >/dev/null
+# Accounts that already have a sandbox for this directory, space-padded so a whole-word
+# `case` match cannot hit a substring. One `sbx ls` serves both the default and the
+# create-or-attach decision.
+existing_accounts() {
+    local dir=$1 name account out=' '
+    while read -r name; do
+        for account in "${ACCOUNTS[@]}"; do
+            if [ "$name" = "claude-$dir-$account" ]; then out="$out$account "; fi
+        done
+    done < <(sbx ls --json 2>/dev/null | jq -r '(.sandboxes // [])[].name')
+    printf '%s' "$out"
+}
+
+# Ask which account this run uses; the answer goes to stdout, the menu to stderr.
+# The account is the sandbox name suffix, so it is chosen on every run, not only at
+# creation. Exactly one sandbox here makes its account the default; zero or two leave
+# none, and an empty answer just re-asks.
+select_account() {
+    local existing=$1 account default='' count=0 i mark reply
+    [ -t 0 ] || die "no terminal to choose an account on"
+
+    for account in "${ACCOUNTS[@]}"; do
+        case $existing in
+            *" $account "*)
+                count=$((count + 1))
+                default=$account
+                ;;
+        esac
+    done
+    [ "$count" -eq 1 ] || default=''
+
+    while :; do
+        step 'select Claude account'
+        i=0
+        for account in "${ACCOUNTS[@]}"; do
+            i=$((i + 1))
+            mark=
+            case $existing in *" $account "*) mark=" (sandbox exists)" ;; esac
+            printf '%s%s. %s%s%s%s%s\n' "$INDENT" "$i" "$WHITE" "$account" "$GREY" "$mark" "$OFF" >&2
+        done
+        printf '%s%s' "$INDENT" "${default:+[$default] }> " >&2
+        read -r reply || die 'no account chosen'
+
+        reply=${reply:-$default}
+        i=0
+        for account in "${ACCOUNTS[@]}"; do
+            i=$((i + 1))
+            if [ "$reply" = "$i" ] || [ "$reply" = "$account" ]; then
+                printf '%s' "$account"
+                return
+            fi
+        done
+    done
 }
 
 # Get the placeholder of an existing sandbox secret.
@@ -69,9 +124,9 @@ store_token_in_sbx() {
     step "reading $WHITE$account$GREY token from keyring $WHITE$KEYRING$GREY"
     token=$(secret-tool lookup service sclaude account "$account" 2>/dev/null) && [ -n "$token" ] || {
         err="no $WHITE$account$GREY token in keyring $WHITE$KEYRING$GREY. Mint one and store it:"
-        err="$err\n              $WHITE""$ claude setup-token"
-        err="$err\n              $ secret-tool store --collection=$KEYRING_PATH \\\\"
-        err="$err\n                --label='sclaude - $account' service sclaude account $account$GREY"
+        err="$err\n$INDENT$WHITE""$ claude setup-token"
+        err="$err\n$INDENT$ secret-tool store --collection=$KEYRING_PATH \\\\"
+        err="$err\n$INDENT  --label='sclaude - $account' service sclaude account $account$GREY"
         die "$err"
     }
 
@@ -82,30 +137,32 @@ store_token_in_sbx() {
     out=$(printf '%s' "$token" |
         sbx secret set-custom --host "$HOST" --env "$ENV_VAR" --sandbox "$name" \
             ${placeholder:+--placeholder "$placeholder"} 2>&1) ||
-        die "could not store the $WHITE$account$GREY token:\n              ${out//$'\n'/$'\n'              }"
+        die "could not store the $WHITE$account$GREY token:\n$INDENT${out//$'\n'/$'\n'$INDENT}"
     ok "token stored for $WHITE$name$GREY"
 }
 
 main() {
-    local account=${CLAUDE_ACCOUNT:-} name cmd
+    local cmd dir existing account name
     # Check needed utilities
     for cmd in sbx jq secret-tool; do
         command -v "$cmd" >/dev/null || die "$WHITE$cmd$GREY is not installed"
     done
-    # Claude account should be "personal" or "work".
-    case $account in
-        personal | work) ;;
-        "") die "CLAUDE_ACCOUNT is not set; use the $WHITE""psclaude$GREY or $WHITE""wsclaude$GREY alias" ;;
-        *) die "CLAUDE_ACCOUNT must be $WHITE""personal$GREY or $WHITE""work$GREY, not $WHITE$account$GREY" ;;
-    esac
     # Global Claude token could be used silently by default, avoid that.
     assert_no_global_anthropic_token
+
+    dir=$(basename "$PWD")
+    existing=$(existing_accounts "$dir")
+    account=$(select_account "$existing")
+    ok "account $WHITE$account"
     # The account is the name suffix, so the name alone says which one a sandbox uses.
-    name="claude-$(basename "$PWD")-$account"
-    if ! sandbox_exists "$name"; then
-        store_token_in_sbx "$account" "$name"
-        set -- "${KITS[@]}" "$@"
-    fi
+    name="claude-$dir-$account"
+    case $existing in
+        *" $account "*) ;;
+        *)
+            store_token_in_sbx "$account" "$name"
+            set -- "${KITS[@]}" "$@"
+            ;;
+    esac
 
     exec sbx run claude . --name "$name" "$@"
 }

@@ -25,12 +25,16 @@ against **sbx v0.38.0** — if `sbx` contradicts one, flag it, don't silently fi
 ## Accounts
 
 - The account is the sandbox name suffix, `claude-<dir>-<account>`. `sbx` is write-only, so `sbx ls`
-  is the only record of it. `CLAUDE_ACCOUNT` is therefore required on *every* run — the name has to
-  be rebuilt to attach. Only the keyring read is create-only.
+  is the only record of it. The prompt therefore runs on *every* run — the name has to be rebuilt to
+  attach. Only the keyring read is create-only.
 - The secret must exist *before* creation: the env var is injected then and never again. Storing
   against a running sandbox updates the proxy mapping but adds no env var, whatever the CLI prints.
-- `CLAUDE_ACCOUNT` is an exact match against `personal` or `work`, not a pattern. Adding one means
-  editing the `case` and enrolling its token.
+- The menu is `ACCOUNTS`; adding one means that array plus its keyring entry. The answer is matched
+  whole against the index or the name — no pattern, so a typo re-asks instead of resolving.
+- Existence is read once into a space-padded string and matched with `*" $account "*`; it drives both
+  the default and create-vs-attach. Unpadded, `work` would match a `workspace` suffix.
+- The menu goes to stderr, the chosen name to stdout — `select_account` is captured in `$(...)`, and
+  stdout past the `exec` belongs to Claude. No tty is fatal: nothing may pick an account silently.
 - Always `--sandbox`. A global anthropic secret forces api-key mode, which seeds an `apiKeyHelper` and
   kills the claude.ai MCP connectors — `sclaude` refuses to run at all while one exists.
 - `set-custom` upserts on `--placeholder`. Omit it for a fresh mapping; pass one back only after
@@ -82,8 +86,11 @@ Bash, `set -euo pipefail`. The kit list is explicit, not globbed.
 Wrapper output borrows `sbx`'s glyphs (`→` step, `✓` result, `✗` failure) but prefixes a coral
 `[sclaude]` tag flush left, so the two logs stay tellable apart in one scrollback. `log()` wraps the
 message in grey; values inside it are `$WHITE` and return to `$GREY` after, so a line reads as a
-shape before it reads as words. Everything goes to stderr and drops colour off a tty;
-continuation lines indent by 14, the width of `[sclaude]  x  `. `sbx secret set-custom` narrates in
+shape before it reads as words. Everything goes to stderr and drops colour off a tty; every line
+after the first — menu entries, wrapped errors — indents by `$INDENT`, four spaces. `sbx secret set-custom` narrates in
 three lines — capture it and show it only when it fails. The statusline renders
-`claude-<dir>-<account>` as `[SBX] [Account] <dir>`, the account bold in its own hue; an unknown
-suffix is left alone.
+`claude-<dir>-<account>` as `[Account] [SBX] <dir>`, the account leading and bold in its own hue; an
+unknown suffix is left alone. It never measures the terminal, so the two unbounded segments are
+capped instead: dir 24 (`.../` prefix, whole components only), branch 20 (`...` suffix), both
+overridable with `SBX_STATUSLINE_MAX_DIR` and `SBX_STATUSLINE_MAX_BRANCH`. Ellipses are ASCII, not
+`…`, so a cropped name never reads as one character.

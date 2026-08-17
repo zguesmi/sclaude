@@ -40,20 +40,26 @@ Check them with `sbx settings get ...` and `sbx secret ls`.
 
 ## Usage
 
-`CLAUDE_ACCOUNT` names the Claude account, so define one alias per account:
+Every run opens with the account menu; the answer picks the sandbox:
 
 ```shell
-alias psclaude='CLAUDE_ACCOUNT=personal sclaude'
-alias wsclaude='CLAUDE_ACCOUNT=work sclaude'
+[sclaude]  →  select Claude account
+    1. personal (sandbox exists)
+    2. work
+    [personal] > _
 ```
+
+Answer with the number or the name. When exactly one of the two sandboxes exists for the directory
+its account is the default, shown in brackets and taken by a bare Enter; with none or both there is
+no default. Anything else re-asks, and a run with no terminal fails instead of guessing.
 
 Arguments go to `sbx run` verbatim; Claude's own go after `--`.
 
 ```shell
-wsclaude                      # claude here, creating the sandbox on first run
-wsclaude -- -r                # claude -r
-wsclaude --kit /path/to/kit   # extra kit, only when creating
-wsclaude /path/to/docs:ro     # extra read-only workspace
+sclaude                      # claude here, creating the sandbox on first run
+sclaude -- -r                # claude -r
+sclaude --kit /path/to/kit   # extra kit, only when creating
+sclaude /path/to/docs:ro     # extra read-only workspace
 ```
 
 Kits apply at creation only; add one to a live sandbox with `sbx kit add <sandbox> <kit>`.
@@ -90,14 +96,13 @@ sandbox.
 
 ## Accounts
 
-Each sandbox authenticates as one Claude account, named by `CLAUDE_ACCOUNT`. `personal` and `work` are
-the only accepted values; anything else is refused. The account is part of the sandbox name —
-`claude-<dir>-<account>` — so `sbx ls` is the only record of which account a sandbox belongs to.
-There is no state file to lose.
+Each sandbox authenticates as one Claude account, chosen at the prompt. `personal` and `work` are the
+only two offered. The account is part of the sandbox name — `claude-<dir>-<account>` — so `sbx ls` is
+the only record of which account a sandbox belongs to. There is no state file to lose.
 
-`CLAUDE_ACCOUNT` is required on **every** run, not just the first: `sbx run` resolves a sandbox by
-name, so the name has to be rebuilt each time to attach to the right one. A directory used with both
-aliases therefore ends up with two sandboxes, one per account.
+The prompt therefore runs on **every** run, not just the first: `sbx run` resolves a sandbox by name,
+so the name has to be rebuilt each time to attach to the right one. Answering with the other account
+in a directory that already has one builds a second sandbox rather than switching the first.
 
 Create the keyring once, in Seahorse (_Passwords and Keys_): **+** → **Password Keyring**, named
 `sclaude`. Then enroll each account. `sclaude` never writes the token; it prints these two commands
@@ -138,11 +143,11 @@ A **global** anthropic secret would force api-key mode, which seeds an `apiKeyHe
 claude.ai MCP connectors. `sclaude` refuses to create a sandbox while one exists.
 
 The env var is injected at creation and nothing later can change it, so a sandbox keeps its account
-for life. Switching accounts in a directory just means using the other alias, which builds a second
-sandbox. Renewing a token means removing the sandbox so it is rebuilt with the new one:
+for life. Switching accounts in a directory just means answering with the other one, which builds a
+second sandbox. Renewing a token means removing the sandbox so it is rebuilt with the new one:
 
 ```shell
-sbx rm claude-<dir>-personal && psclaude
+sbx rm claude-<dir>-personal && sclaude
 ```
 
 Removing an account's secret is keyed on the placeholder, and touches only that sandbox:
@@ -155,4 +160,4 @@ secret-tool clear service sclaude account personal                        # only
 
 Sandboxes named `claude-<dir>` with no suffix predate this and `sclaude` no longer reaches them —
 it only ever resolves the suffixed name. Reach one with `sbx run claude . --name claude-<dir>`, or
-`sbx rm` it and let an alias rebuild it.
+`sbx rm` it and let `sclaude` rebuild it.
