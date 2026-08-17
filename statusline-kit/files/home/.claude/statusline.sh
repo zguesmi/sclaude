@@ -4,9 +4,7 @@
 input=$(cat)
 
 # --- sbx sandbox name (IS_SANDBOX/SANDBOX_VM_ID set by sbx itself) ---
-# claude-<dir>-<account> is shown as "[Account] <dir>": the agent is already implied by the
-# badge, and the account reads better as its own tag. Names without a known account suffix
-# (sandboxes predating it) keep whatever is left after the prefix.
+# claude-<dir>-<account> is shown as "[Account] <dir>".
 sbx_name=""
 sbx_account=""
 sbx_account_sgr=""
@@ -21,16 +19,14 @@ if [ "${IS_SANDBOX:-}" = "1" ]; then
 fi
 
 # --- directory (path, shortened when long) ---
+# /home/x/some/dir -> ~/some/dir -> …/some/dir
 cwd=$(echo "$input" | jq -r '.workspace.current_dir // empty')
 dir="$cwd"
-
-# $HOME -> ~, then drop leading components until it fits, so the deepest (most
-# informative) part of the path is what survives: ~/Personal/Obsidian/vault -> …/Obsidian/vault
 case "$dir" in
     "$HOME") dir="~" ;;
     "$HOME"/*) dir="~${dir#"$HOME"}" ;;
 esac
-max=${SBX_STATUSLINE_MAX_DIR:-32}
+max=${SBX_STATUSLINE_MAX_DIR:-24}
 if [ "${#dir}" -gt "$max" ]; then
     IFS='/' read -ra __comps <<< "$dir"
     kept=""
@@ -50,6 +46,10 @@ fi
 branch=""
 if git -C "$cwd" rev-parse --is-inside-work-tree --no-optional-locks >/dev/null 2>&1; then
     branch=$(git -C "$cwd" symbolic-ref --short HEAD 2>/dev/null)
+    branch_max=${SBX_STATUSLINE_MAX_BRANCH:-20}
+    if [ "${#branch}" -gt "$branch_max" ]; then
+        branch="${branch:0:$((branch_max - 1))}…"
+    fi
 fi
 
 # --- model ---
@@ -61,7 +61,7 @@ used=$(echo "$input" | jq -r '.context_window.used_percentage // empty')
 tokens=$(echo "$input" | jq -r '.context_window.total_input_tokens // empty')
 
 # --- rate limits ---
-five_pct=$(echo "$input" | jq -r '.rate_limits.five_hour.used_percentage // empty')
+five_hours_rate_pct=$(echo "$input" | jq -r '.rate_limits.five_hour.used_percentage // empty')
 
 # --- cost ---
 cost=$(echo "$input" | jq -r '.cost.total_cost_usd // empty')
@@ -99,27 +99,27 @@ caveman_badge=$(caveman)
 # --- assemble ---
 parts=()
 
-# sbx sandbox badge (coral, matching shell-prompt-kit's SBX segment)
+# [Personal/Work] [SBX] <sbx-name>
 if [ -n "$sbx_name" ]; then
-    sbx_badge=$(printf '\033[38;5;173m[SBX]\033[0m')
+    sbx_badge=""
     [ -n "$sbx_account" ] &&
-        sbx_badge+=$(printf ' \033[%sm[%s]\033[0m' "$sbx_account_sgr" "$sbx_account")
-    sbx_badge+=$(printf ' \033[38;5;173m%s\033[0m' "$sbx_name")
+        sbx_badge=$(printf '\033[%sm[%s]\033[0m ' "$sbx_account_sgr" "$sbx_account")
+    sbx_badge+=$(printf '\033[38;5;173m[SBX]\033[0m \033[38;5;173m%s\033[0m' "$sbx_name")
     parts+=("$sbx_badge")
 fi
 
-# model
+# model: Opus 5 (high)
 [ -n "$model" ] && parts+=("$(printf '\033[90m%s\033[0m' "$model ($effort)")")
 
-# context used % (+ token count)
+# context used % (+ token count): 104.3k (10%)
 if [ -n "$used" ]; then
     used_int=$(printf '%.0f' "$used")
     tok_str=""
     if [ -n "$tokens" ]; then
         if [ "$tokens" -ge 1000 ]; then
-        tok_str=" $(awk -v t="$tokens" 'BEGIN{printf "%.1fk", t/1000}')"
+        tok_str="$(awk -v t="$tokens" 'BEGIN{printf "%.1fk", t/1000}') "
         else
-        tok_str=" ${tokens}"
+        tok_str="${tokens} "
         fi
     fi
     if [ "$used_int" -ge 80 ]; then
@@ -131,13 +131,13 @@ if [ -n "$used" ]; then
     fi
 fi
 
-# 5-hour rate limit
-if [ -n "$five_pct" ]; then
-    five_int=$(printf '%.0f' "$five_pct")
-    [ "$five_int" -gt 0 ] && parts+=("$(printf '\033[90m5h:%d%%\033[0m' "$five_int")")
+# 5-hour rate limit: 5h:12%
+if [ -n "$five_hours_rate_pct" ]; then
+    rate_int=$(printf '%.0f' "$five_hours_rate_pct")
+    [ "$rate_int" -gt 0 ] && parts+=("$(printf '\033[90m5h:%d%%\033[0m' "$rate_int")")
 fi
 
-# directory + branch
+# directory + branch: /some/dir (chore/branch)
 if [ -n "$branch" ]; then
     parts+=("$(printf '\033[34m%s\033[0m \033[36m(%s)\033[0m' "$dir" "$branch")")
 else
