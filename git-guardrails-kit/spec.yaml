@@ -16,13 +16,19 @@ setup:
         mkdir -p /home/agent/.claude/hooks
         f=/home/agent/.claude/settings.json
         [ -f "$f" ] || echo '{}' > "$f"
+        path=/home/agent/.claude/hooks/git-guardrails.sh
+        cmd="/bin/bash $path"
+        # Dedup matches on the script path, not on the whole command string, so an
+        # entry written by an older revision of this kit (bare path, no interpreter)
+        # is dropped too instead of surviving next to the new one.
         # Temp file in the same dir as $f so the mv is an atomic rename.
         tmp=$(mktemp -p /home/agent/.claude)
-        jq --arg cmd /home/agent/.claude/hooks/git-guardrails.sh '
+        jq --arg path "$path" --arg cmd "$cmd" '
           .hooks //= {}
           | .hooks.PreToolUse = (
               ((.hooks.PreToolUse // [])
-                | map(select(((.hooks // []) | map(.command) | index($cmd)) == null)))
+                | map(select(((.hooks // []) | map(.command // "")
+                    | map(select(contains($path))) | length) == 0)))
               + [{matcher: "Bash", hooks: [{type: "command", command: $cmd}]}]
             )
         ' "$f" > "$tmp"

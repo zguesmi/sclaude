@@ -18,6 +18,6 @@ setup:
         # the jq merge leaves all other settings untouched. Temp file lives in the
         # same dir as $f so the mv below is an atomic rename, not a cross-fs copy.
         tmp=$(mktemp -p /home/agent/.claude)
-        jq '.statusLine = {type: "command", command: "/home/agent/.claude/statusline.sh"}' "$f" > "$tmp"
+        jq '.statusLine = {type: "command", command: "/bin/bash /home/agent/.claude/statusline.sh"}' "$f" > "$tmp"
         mv "$tmp" "$f"
       user: "1000"
