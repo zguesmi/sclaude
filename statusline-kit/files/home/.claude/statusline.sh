@@ -3,18 +3,18 @@
 
 input=$(cat)
 
-# --- sbx sandbox name (IS_SANDBOX/SANDBOX_VM_ID set by sbx itself) ---
-# claude-<dir>-<account> is shown as "[Account] <dir>".
-sbx_name=""
+# --- sbx account (IS_SANDBOX/SANDBOX_VM_ID set by sbx itself) ---
+# The sandbox is named claude-<dir>-<account>. Only the account is read out of it:
+# <dir> is the workspace directory, which the line already carries further along.
+in_sbx=""
 sbx_account=""
 sbx_account_sgr=""
 if [ "${IS_SANDBOX:-}" = "1" ]; then
-    sbx_name="${SANDBOX_VM_ID:-$(hostname)}"
-    sbx_name="${sbx_name#claude-}"
+    in_sbx=1
     # Bold, and a hue per account, so which subscription is paying reads at a glance.
-    case "$sbx_name" in
-        *-personal) sbx_account="Personal" sbx_account_sgr='1;38;5;215' sbx_name="${sbx_name%-personal}" ;;
-        *-work) sbx_account="Work" sbx_account_sgr='1;38;5;117' sbx_name="${sbx_name%-work}" ;;
+    case "${SANDBOX_VM_ID:-$(hostname)}" in
+        *-personal) sbx_account="Personal" sbx_account_sgr='1;38;5;215' ;;
+        *-work) sbx_account="Work" sbx_account_sgr='1;38;5;117' ;;
     esac
 fi
 
@@ -99,12 +99,12 @@ caveman_badge=$(caveman)
 # --- assemble ---
 parts=()
 
-# [Personal/Work] [SBX] <sbx-name>
-if [ -n "$sbx_name" ]; then
+# [Personal/Work] [SBX]
+if [ -n "$in_sbx" ]; then
     sbx_badge=""
     [ -n "$sbx_account" ] &&
         sbx_badge=$(printf '\033[%sm[%s]\033[0m ' "$sbx_account_sgr" "$sbx_account")
-    sbx_badge+=$(printf '\033[38;5;173m[SBX]\033[0m \033[38;5;173m%s\033[0m' "$sbx_name")
+    sbx_badge+=$(printf '\033[38;5;173m[SBX]\033[0m')
     parts+=("$sbx_badge")
 fi
 

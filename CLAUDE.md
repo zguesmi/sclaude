@@ -93,9 +93,11 @@ Wrapper output borrows `sbx`'s glyphs (`→` step, `✓` result, `✗` failure) 
 message in grey; values inside it are `$WHITE` and return to `$GREY` after, so a line reads as a
 shape before it reads as words. Everything goes to stderr and drops colour off a tty; every line
 after the first — menu entries, wrapped errors — indents by `$INDENT`, four spaces. `sbx secret set-custom` narrates in
-three lines — capture it and show it only when it fails. The statusline renders
-`claude-<dir>-<account>` as `[Account] [SBX] <dir>`, the account leading and bold in its own hue; an
-unknown suffix is left alone. It never measures the terminal, so the two unbounded segments are
-capped instead: dir 24 (`.../` prefix, whole components only), branch 20 (`...` suffix), both
-overridable with `SBX_STATUSLINE_MAX_DIR` and `SBX_STATUSLINE_MAX_BRANCH`. Ellipses are ASCII, not
+three lines — capture it and show it only when it fails. The statusline reads only the account out of
+`claude-<dir>-<account>` and renders it as `[Account] [SBX]`, the account leading and bold in its own
+hue; an unknown suffix drops the badge and leaves `[SBX]` alone. The name itself is never shown —
+`<dir>` is the workspace directory, which the line already carries. It never measures the terminal,
+so the two unbounded segments are capped instead: dir 24 (`.../` prefix, whole components only),
+branch 20 (`...` suffix), both overridable with `SBX_STATUSLINE_MAX_DIR` and
+`SBX_STATUSLINE_MAX_BRANCH`. Ellipses are ASCII, not
 `…`, so a cropped name never reads as one character.

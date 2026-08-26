@@ -1,1 +1,2 @@
 - Make the kit name bg color change according to the coding agent (claude, codex, ...).
+- Prevent `gh repo delete`
