@@ -99,12 +99,11 @@ caveman_badge=$(caveman)
 # --- assemble ---
 parts=()
 
-# [Personal/Work] [SBX]
+# [SBX] Personal/Work
 if [ -n "$in_sbx" ]; then
-    sbx_badge=""
+    sbx_badge=$(printf '\033[38;5;173m[SBX]\033[0m')
     [ -n "$sbx_account" ] &&
-        sbx_badge=$(printf '\033[%sm[%s]\033[0m ' "$sbx_account_sgr" "$sbx_account")
-    sbx_badge+=$(printf '\033[38;5;173m[SBX]\033[0m')
+        sbx_badge+=$(printf ' \033[%sm%s\033[0m' "$sbx_account_sgr" "$sbx_account")
     parts+=("$sbx_badge")
 fi
 
