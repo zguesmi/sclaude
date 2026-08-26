@@ -1,3 +1,8 @@
+---
+paths:
+  - "claude-config-kit/**/*"
+---
+
 # Claude config
 
 What `claude-config-kit` writes into a fresh sandbox: plugins, marketplaces, settings.

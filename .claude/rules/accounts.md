@@ -1,3 +1,8 @@
+---
+paths:
+  - "sclaude"
+---
+
 # Accounts
 
 Which Claude subscription pays for a sandbox: the prompt, the sandbox name suffix, the token, and the

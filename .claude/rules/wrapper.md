@@ -1,3 +1,8 @@
+---
+paths:
+  - "sclaude"
+---
+
 # Wrapper
 
 The `sclaude` script itself: what it owns, and how it hands off to `sbx`.

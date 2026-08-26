@@ -1,3 +1,8 @@
+---
+paths:
+  - "statusline-kit/**/*"
+---
+
 # Statusline
 
 What `statusline-kit/files/home/.claude/statusline.sh` renders, and why each segment is shaped that

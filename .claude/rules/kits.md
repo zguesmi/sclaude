@@ -1,3 +1,12 @@
+---
+paths:
+  - "**/spec.yaml"
+  - "claude-config-kit/**/*"
+  - "git-guardrails-kit/**/*"
+  - "shell-prompt-kit/**/*"
+  - "statusline-kit/**/*"
+---
+
 # Kits
 
 Spec format, step ordering, and the files several kits write to at once.
