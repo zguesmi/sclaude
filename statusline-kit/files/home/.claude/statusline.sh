@@ -8,13 +8,12 @@ input=$(cat)
 # <dir> is the workspace directory, which the line already carries further along.
 in_sbx=""
 sbx_account=""
-sbx_account_sgr=""
+sbx_hue='38;5;173'
 if [ "${IS_SANDBOX:-}" = "1" ]; then
     in_sbx=1
-    # Bold, and a hue per account, so which subscription is paying reads at a glance.
     case "${SANDBOX_VM_ID:-$(hostname)}" in
-        *-personal) sbx_account="Personal" sbx_account_sgr='1;38;5;215' ;;
-        *-work) sbx_account="Work" sbx_account_sgr='1;38;5;117' ;;
+        *-personal) sbx_account="Personal" ;;
+        *-work) sbx_account="Work" ;;
     esac
 fi
 
@@ -101,9 +100,9 @@ parts=()
 
 # [SBX] Personal/Work
 if [ -n "$in_sbx" ]; then
-    sbx_badge=$(printf '\033[38;5;173m[SBX]\033[0m')
+    sbx_badge=$(printf '\033[%sm[SBX]\033[0m' "$sbx_hue")
     [ -n "$sbx_account" ] &&
-        sbx_badge+=$(printf ' \033[%sm%s\033[0m' "$sbx_account_sgr" "$sbx_account")
+        sbx_badge+=$(printf ' \033[1;%sm%s\033[0m' "$sbx_hue" "$sbx_account")
     parts+=("$sbx_badge")
 fi
 
