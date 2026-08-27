@@ -102,7 +102,7 @@ parts=()
 if [ -n "$in_sbx" ]; then
     sbx_badge=$(printf '\033[%sm[SBX]\033[0m' "$sbx_hue")
     [ -n "$sbx_account" ] &&
-        sbx_badge+=$(printf ' \033[1;%sm%s\033[0m' "$sbx_hue" "$sbx_account")
+        sbx_badge+=$(printf ' \033[%sm%s\033[0m' "$sbx_hue" "$sbx_account")
     parts+=("$sbx_badge")
 fi
 
