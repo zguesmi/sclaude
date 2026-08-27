@@ -25,7 +25,7 @@ case "$dir" in
     "$HOME") dir="~" ;;
     "$HOME"/*) dir="~${dir#"$HOME"}" ;;
 esac
-max=${SBX_STATUSLINE_MAX_DIR:-24}
+max=${SBX_STATUSLINE_MAX_DIR:-32}
 if [ "${#dir}" -gt "$max" ]; then
     IFS='/' read -ra __comps <<< "$dir"
     kept=""
