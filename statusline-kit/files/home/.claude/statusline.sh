@@ -45,7 +45,7 @@ fi
 branch=""
 if git -C "$cwd" rev-parse --is-inside-work-tree --no-optional-locks >/dev/null 2>&1; then
     branch=$(git -C "$cwd" symbolic-ref --short HEAD 2>/dev/null)
-    branch_max=${SBX_STATUSLINE_MAX_BRANCH:-20}
+    branch_max=${SBX_STATUSLINE_MAX_BRANCH:-32}
     if [ "${#branch}" -gt "$branch_max" ]; then
         branch="${branch:0:$((branch_max - 1))}…"
     fi
