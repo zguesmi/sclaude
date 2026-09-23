@@ -1,0 +1,41 @@
+schemaVersion: "2"
+kind: mixin
+name: agent-stats-kit
+displayName: Agent tool stats
+description: Registers Claude Code hooks (UserPromptSubmit, PostToolUse, Stop, SessionEnd) that keep a git-tracked .agent-tool-stats.md in the project, one markdown block per session listing every tool used and how many times.
+
+setup:
+  install:
+    - description: |
+        Register /home/agent/.claude/hooks/agent-stats.py as a UserPromptSubmit, PostToolUse, Stop
+        and SessionEnd hook in ~/.claude/settings.json via a jq merge, so every other key (and every
+        other hook) is preserved. Any earlier entry pointing at the same script is dropped first, so
+        re-applying the kit does not stack duplicates.
+      command: |
+        set -e
+        mkdir -p /home/agent/.claude/hooks
+        f=/home/agent/.claude/settings.json
+        [ -f "$f" ] || echo '{}' > "$f"
+        path=/home/agent/.claude/hooks/agent-stats.py
+        cmd="python3 $path"
+        # files/ lands mode 644 and the kit cannot chmod it, so the script is run through the
+        # interpreter, never as a bare path. Dedup matches on the script path, not on the whole
+        # command string, so an entry written by an older revision of this kit is dropped too.
+        # Temp file in the same dir as $f so the mv is an atomic rename.
+        tmp=$(mktemp -p /home/agent/.claude)
+        jq --arg path "$path" --arg cmd "$cmd" '
+          def strip: ((. // [])
+            | map(select(((.hooks // []) | map(.command // "")
+                | map(select(contains($path))) | length) == 0)));
+          def entry($m): if $m == null
+            then {hooks: [{type: "command", command: $cmd}]}
+            else {matcher: $m, hooks: [{type: "command", command: $cmd}]}
+            end;
+          .hooks //= {}
+          | .hooks.UserPromptSubmit = ((.hooks.UserPromptSubmit | strip) + [entry(null)])
+          | .hooks.PostToolUse      = ((.hooks.PostToolUse      | strip) + [entry("*")])
+          | .hooks.Stop             = ((.hooks.Stop             | strip) + [entry(null)])
+          | .hooks.SessionEnd       = ((.hooks.SessionEnd       | strip) + [entry(null)])
+        ' "$f" > "$tmp"
+        mv "$tmp" "$f"
+      user: "1000"

@@ -11,6 +11,7 @@ on the next sandbox created _after_ it is pushed.
 | `statusline-kit`     | statusline: sandbox + account, cwd, branch, model, context %, rate limit |
 | `git-guardrails-kit` | `PreToolUse` hook blocking destructive git commands                      |
 | `claude-config-kit`  | settings (recap off, default TUI, opus), global `CLAUDE.md`, plugins     |
+| `agent-stats-kit`    | hooks writing a git-tracked `.agent-tool-stats.md` (tools used, counts)  |
 
 ## Install
 
