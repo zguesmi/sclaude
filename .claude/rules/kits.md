@@ -1,6 +1,7 @@
 ---
 paths:
   - "**/spec.yaml"
+  - "agent-stats-kit/**/*"
   - "claude-config-kit/**/*"
   - "git-guardrails-kit/**/*"
   - "shell-prompt-kit/**/*"

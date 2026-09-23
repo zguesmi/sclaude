@@ -13,6 +13,7 @@ KITS=(
     --kit "git+$REPO#ref=master&dir=statusline-kit"
     --kit "git+$REPO#ref=master&dir=git-guardrails-kit"
     --kit "git+$REPO#ref=master&dir=claude-config-kit"
+    --kit "git+$REPO#ref=master&dir=agent-stats-kit"
 )
 # Anthropic subscription management.
 # The accounts offered at the prompt; each needs its own keyring entry.
