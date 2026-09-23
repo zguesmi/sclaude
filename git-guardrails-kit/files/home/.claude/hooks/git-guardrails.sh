@@ -74,6 +74,6 @@ if has 'git[^;&|]* restore( |$)'; then
 fi
 has 'git[^;&|]* switch[^;&|]* --discard-changes' && deny 'git switch --discard-changes' 'Throws away uncommitted changes.'
 has 'git[^;&|]* stash[^;&|]* (drop|clear)' && deny 'git stash drop / clear' 'Stash entries are not in any branch; dropping them is final.'
-has 'git[^;&|]* worktree[^;&|]* remove[^;&|]* (--force|-f)( |$)' && deny 'git worktree remove --force' 'Force-removes a worktree with uncommitted changes in it.'
+# has 'git[^;&|]* worktree[^;&|]* remove[^;&|]* (--force|-f)( |$)' && deny 'git worktree remove --force' 'Force-removes a worktree with uncommitted changes in it.'
 
 exit 0

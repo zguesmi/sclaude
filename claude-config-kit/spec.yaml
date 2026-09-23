@@ -7,6 +7,8 @@ description: |
         - Session recap: off
         - TUI: default
         - Default model: Opus
+        - Output style: Concise
+        - Co-authored-by trailer: off
         - Global ~/.claude/CLAUDE.md
 
 setup:
@@ -17,7 +19,8 @@ setup:
         f=/home/agent/.claude/settings.json
         # Temp file in the same dir as $f so the mv is an atomic rename.
         tmp=$(mktemp -p /home/agent/.claude)
-        jq '.awaySummaryEnabled = false | .tui = "default" | .model = "opus"' "$f" > "$tmp"
+        jq '.awaySummaryEnabled = false | .tui = "default" | .model = "opus"
+            | .outputStyle = "Concise" | .includeCoAuthoredBy = false' "$f" > "$tmp"
         mv "$tmp" "$f"
       user: "1000"
     - description: |
